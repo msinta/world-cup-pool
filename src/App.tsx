@@ -21,12 +21,12 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-4 py-6">
         <Tabs defaultValue="leaderboard">
-          <TabsList className="mb-6 w-full grid grid-cols-5 sm:inline-flex">
-            <TabsTrigger value="leaderboard">🏆 Standings</TabsTrigger>
-            <TabsTrigger value="entries">📋 Entries</TabsTrigger>
-            <TabsTrigger value="matches">⚽ Matches</TabsTrigger>
-            <TabsTrigger value="rules">📖 Rules</TabsTrigger>
-            <TabsTrigger value="admin">⚙️ Admin</TabsTrigger>
+          <TabsList className="mb-6 w-full grid grid-cols-5 sm:inline-flex bg-transparent p-0 gap-1">
+            <TabsTrigger value="leaderboard" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">🏆 Standings</TabsTrigger>
+            <TabsTrigger value="matches" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">⚽ Matches</TabsTrigger>
+            <TabsTrigger value="entries" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">📋 Entries</TabsTrigger>
+            <TabsTrigger value="rules" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">📖 Rules</TabsTrigger>
+            <TabsTrigger value="admin" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">⚙️ Admin</TabsTrigger>
           </TabsList>
 
           <TabsContent value="leaderboard">

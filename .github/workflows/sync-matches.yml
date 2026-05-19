@@ -1,0 +1,22 @@
+name: Sync WC Matches
+
+on:
+  schedule:
+    # Runs every 2 hours — catches results within 2 hours of final whistle
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub Actions UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync matches
+        run: node scripts/sync-matches.mjs
+        env:
+          VITE_FOOTBALL_API_KEY: ${{ secrets.VITE_FOOTBALL_API_KEY }}

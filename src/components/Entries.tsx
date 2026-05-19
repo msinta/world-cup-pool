@@ -3,6 +3,7 @@ import { Plus, Users, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, ENTRY_FEE } from '@/types'
 import type { Team, Participant } from '@/types'
+import { EditEntry } from '@/components/EditEntry'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -260,6 +261,8 @@ export function Entries() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <EditEntry allTeams={teams} onDone={load} />
 
       {loading ? (
         <div className="text-center py-16 text-muted-foreground">Loading…</div>

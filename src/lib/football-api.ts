@@ -1,0 +1,90 @@
+import type { Stage } from '@/types'
+
+const API_BASE = 'https://api.football-data.org/v4'
+const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY as string | undefined
+
+export const hasApiKey = !!API_KEY
+
+const STAGE_MAP: Partial<Record<string, Stage>> = {
+  GROUP_STAGE: 'group',
+  ROUND_OF_32: 'round_of_32',
+  ROUND_OF_16: 'round_of_16',
+  QUARTER_FINALS: 'quarter_final',
+  SEMI_FINALS: 'semi_final',
+  FINAL: 'final',
+}
+
+// Normalize team name for fuzzy matching
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9 ]/g, '')
+    .trim()
+}
+
+// Known name differences between football-data.org and our DB
+const ALIASES: Record<string, string> = {
+  'united states': 'usa',
+  'republic of ireland': 'ireland',
+  'ir iran': 'iran',
+  'cote divoire': 'ivory coast',
+  'czech republic': 'czechia',
+  'dr congo': 'congo dr',
+  'congo': 'congo dr',
+  'bosnia and herzegovina': 'bosnia-herzegovina',
+  'south korea': 'korea republic',
+}
+
+export interface ApiTeam {
+  id: number
+  name: string
+  shortName: string
+}
+
+export interface ApiMatch {
+  id: number
+  utcDate: string
+  stage: string
+  status: 'SCHEDULED' | 'TIMED' | 'IN_PLAY' | 'PAUSED' | 'FINISHED' | 'POSTPONED' | 'CANCELLED' | 'SUSPENDED'
+  homeTeam: ApiTeam
+  awayTeam: ApiTeam
+  score: {
+    winner: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null
+    fullTime: { home: number | null; away: number | null }
+    penalties: { home: number | null; away: number | null }
+  }
+}
+
+export async function fetchWorldCupMatches(): Promise<ApiMatch[]> {
+  if (!API_KEY) throw new Error('VITE_FOOTBALL_API_KEY is not configured')
+  const res = await fetch(`${API_BASE}/competitions/WC/matches?season=2026`, {
+    headers: { 'X-Auth-Token': API_KEY },
+  })
+  if (!res.ok) throw new Error(`football-data.org ${res.status}: ${res.statusText}`)
+  const data = (await res.json()) as { matches: ApiMatch[] }
+  return data.matches
+}
+
+export function mapApiStage(apiStage: string): Stage | null {
+  return STAGE_MAP[apiStage] ?? null
+}
+
+export function resolveTeamId(apiName: string, shortName: string, nameToId: Map<string, string>): string | null {
+  for (const candidate of [apiName, shortName]) {
+    const n = norm(candidate)
+    const alias = ALIASES[n] ?? n
+    const id = nameToId.get(alias) ?? nameToId.get(n)
+    if (id) return id
+  }
+  return null
+}
+
+export function buildNameMap(teams: { id: string; name: string }[]): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const t of teams) {
+    map.set(norm(t.name), t.id)
+  }
+  return map
+}

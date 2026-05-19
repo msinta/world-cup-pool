@@ -1,21 +1,21 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Shield, Trash2, Plus, Save } from 'lucide-react'
+import { Shield, Trash2, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { calcTeamPoints, LEVEL_LABELS, STAGE_LABELS } from '@/types'
-import type { Team, TeamAdvancement, AdvancementKey, Stage, Participant } from '@/types'
+import { LEVEL_LABELS, STAGE_LABELS } from '@/types'
+import type { Team, Stage, Participant } from '@/types'
+import { hasApiKey, fetchWorldCupMatches, mapApiStage, resolveTeamId, buildNameMap } from '@/lib/football-api'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -24,33 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-const ADV_KEYS: AdvancementKey[] = [
-  'advanced_to_round_32',
-  'advanced_to_round_16',
-  'advanced_to_quarters',
-  'advanced_to_semis',
-  'advanced_to_final',
-  'won_world_cup',
-]
-
-const ADV_LABELS: Record<AdvancementKey, string> = {
-  advanced_to_round_32: 'R32',
-  advanced_to_round_16: 'R16',
-  advanced_to_quarters: 'QF',
-  advanced_to_semis: 'SF',
-  advanced_to_final: 'Fin',
-  won_world_cup: 'W',
-}
-
-const STAGES: Stage[] = [
-  'group',
-  'round_of_32',
-  'round_of_16',
-  'quarter_final',
-  'semi_final',
-  'final',
-]
+import { FlagImg } from '@/components/ui/flag-img'
 
 interface EntryTeamRow {
   id: string
@@ -70,6 +44,8 @@ interface MatchRow {
   stage: Stage
   home_goals: number | null
   away_goals: number | null
+  home_penalty_goals: number
+  away_penalty_goals: number
   is_completed: boolean
   match_date: string | null
   home_team: Team
@@ -121,134 +97,6 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
           </Button>
         </CardContent>
       </Card>
-    </div>
-  )
-}
-
-// --- Advancement Tab ---
-function AdvancementPanel() {
-  const [teams, setTeams] = useState<Team[]>([])
-  const [advMap, setAdvMap] = useState<Map<string, TeamAdvancement>>(new Map())
-  const [dirty, setDirty] = useState<Set<string>>(new Set())
-  const [saving, setSaving] = useState(false)
-
-  const load = useCallback(async () => {
-    const [{ data: t }, { data: a }] = await Promise.all([
-      supabase.from('teams').select('*').order('level').order('name'),
-      supabase.from('team_advancement').select('*'),
-    ])
-    setTeams(t ?? [])
-    const m = new Map<string, TeamAdvancement>((a ?? []).map((r: TeamAdvancement) => [r.team_id, r]))
-    setAdvMap(m)
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const getAdv = (teamId: string): TeamAdvancement =>
-    advMap.get(teamId) ?? {
-      team_id: teamId,
-      advanced_to_round_32: false,
-      advanced_to_round_16: false,
-      advanced_to_quarters: false,
-      advanced_to_semis: false,
-      advanced_to_final: false,
-      won_world_cup: false,
-      updated_at: new Date().toISOString(),
-    }
-
-  const toggle = (teamId: string, key: AdvancementKey, value: boolean) => {
-    const current = getAdv(teamId)
-    const updated = { ...current }
-
-    const idx = ADV_KEYS.indexOf(key)
-    if (value) {
-      // Check all keys up to and including this one
-      for (let i = 0; i <= idx; i++) updated[ADV_KEYS[i]] = true
-    } else {
-      // Uncheck this key and all after it
-      for (let i = idx; i < ADV_KEYS.length; i++) updated[ADV_KEYS[i]] = false
-    }
-
-    setAdvMap((prev) => new Map(prev).set(teamId, updated))
-    setDirty((prev) => new Set(prev).add(teamId))
-  }
-
-  const saveAll = async () => {
-    setSaving(true)
-    try {
-      const toSave = [...dirty].map((id) => ({ ...getAdv(id), updated_at: new Date().toISOString() }))
-      const { error } = await supabase.from('team_advancement').upsert(toSave, { onConflict: 'team_id' })
-      if (error) throw error
-      setDirty(new Set())
-      toast({ title: 'Advancement saved', variant: 'success' })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error saving'
-      toast({ title: 'Save failed', description: msg, variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const grouped: Record<number, Team[]> = {}
-  for (const team of teams) {
-    if (!grouped[team.level]) grouped[team.level] = []
-    grouped[team.level].push(team)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Toggle rounds advanced. Changes are cascading.
-        </p>
-        {dirty.size > 0 && (
-          <Button size="sm" onClick={() => void saveAll()} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving…' : `Save ${dirty.size} change${dirty.size > 1 ? 's' : ''}`}
-          </Button>
-        )}
-      </div>
-
-      {[1, 2, 3, 4, 5, 6].map((level) => (
-        <div key={level}>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-2">{LEVEL_LABELS[level]}</h3>
-          <div className="space-y-1">
-            {(grouped[level] ?? []).map((team) => {
-              const adv = getAdv(team.id)
-              const pts = calcTeamPoints(adv)
-              return (
-                <div
-                  key={team.id}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${dirty.has(team.id) ? 'bg-yellow-50 border border-yellow-200' : 'bg-muted/40'}`}
-                >
-                  <span className="w-6 text-base">{team.flag}</span>
-                  <span className="w-28 truncate font-medium">{team.name}</span>
-                  <span className="text-xs text-muted-foreground w-12">
-                    {pts > 0 ? `${pts} pts` : ''}
-                  </span>
-                  <div className="flex gap-1 ml-auto">
-                    {ADV_KEYS.map((key) => (
-                      <button
-                        key={key}
-                        onClick={() => toggle(team.id, key, !adv[key])}
-                        className={`px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
-                          adv[key]
-                            ? 'bg-green-500 text-white border-green-600'
-                            : 'bg-background text-muted-foreground border-border'
-                        }`}
-                      >
-                        {ADV_LABELS[key]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
@@ -315,13 +163,27 @@ function EntriesPanel() {
     }
     setSaving(true)
     try {
+      const previousTeams = editingEntry.entry_teams.map(et => ({
+        team_id: et.team.id, team_name: et.team.name, flag: et.team.flag, level: et.team.level,
+      }))
+      const newTeams = TIERS.flatMap(tier =>
+        editPicks[tier].map(teamId => {
+          const team = allTeams.find(t => t.id === teamId)!
+          return { team_id: teamId, team_name: team.name, flag: team.flag, level: team.level }
+        })
+      )
       const { error: de } = await supabase.from('entry_teams').delete().eq('entry_id', editingEntry.id)
       if (de) throw de
-      const newTeams = TIERS.flatMap((tier) =>
-        editPicks[tier].map((teamId) => ({ entry_id: editingEntry.id, team_id: teamId })),
+      const { error: ie } = await supabase.from('entry_teams').insert(
+        TIERS.flatMap(tier => editPicks[tier].map(teamId => ({ entry_id: editingEntry.id, team_id: teamId })))
       )
-      const { error: ie } = await supabase.from('entry_teams').insert(newTeams)
       if (ie) throw ie
+      await supabase.from('entry_changes').insert({
+        entry_id: editingEntry.id,
+        changed_by: 'admin',
+        previous_teams: previousTeams,
+        new_teams: newTeams,
+      })
       toast({ title: 'Entry updated', variant: 'success' })
       setEditingEntry(null)
       void load()
@@ -382,9 +244,10 @@ function EntriesPanel() {
                     <div key={tier} className="bg-muted/50 rounded-md px-2 py-1.5">
                       <p className="text-xs text-muted-foreground mb-1">Tier {tier}</p>
                       {tierTeams.map(({ team }) => (
-                        <p key={team.id} className="text-xs">
-                          {team.flag} {team.name}
-                        </p>
+                        <div key={team.id} className="flex items-center gap-1.5 mb-0.5">
+                          <FlagImg emoji={team.flag} size={16} />
+                          <p className="text-xs">{team.name}</p>
+                        </div>
                       ))}
                     </div>
                   )
@@ -395,12 +258,11 @@ function EntriesPanel() {
         })}
       </div>
 
-      {/* Edit dialog */}
       <Dialog open={!!editingEntry} onOpenChange={(o) => { if (!o) setEditingEntry(null) }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Edit Entry — {editingEntry?.participant?.name}
+              Edit — {editingEntry?.participant?.name}
               {editingEntry?.entry_name ? ` · ${editingEntry.entry_name}` : ''}
             </DialogTitle>
           </DialogHeader>
@@ -423,7 +285,10 @@ function EntriesPanel() {
                             value={team.id}
                             disabled={editPicks[tier][slot === 0 ? 1 : 0] === team.id}
                           >
-                            {team.flag} {team.name}
+                            <span className="flex items-center gap-2">
+                              <FlagImg emoji={team.flag} size={16} />
+                              {team.name}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -447,247 +312,190 @@ function EntriesPanel() {
   )
 }
 
-// --- Matches Tab ---
-function MatchesPanel() {
-  const [matches, setMatches] = useState<MatchRow[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  // Add match form
-  const [homeTeamId, setHomeTeamId] = useState('')
-  const [awayTeamId, setAwayTeamId] = useState('')
-  const [stage, setStage] = useState<Stage>('group')
-  const [matchDate, setMatchDate] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    const [{ data: m }, { data: t }] = await Promise.all([
-      supabase
-        .from('matches')
-        .select(
-          'id, stage, home_goals, away_goals, is_completed, match_date, home_team:teams!matches_home_team_id_fkey(id, name, flag, level, created_at), away_team:teams!matches_away_team_id_fkey(id, name, flag, level, created_at)',
-        )
-        .order('match_date', { ascending: false }),
-      supabase.from('teams').select('*').order('level').order('name'),
-    ])
-    setMatches((m ?? []) as unknown as MatchRow[])
-    setTeams(t ?? [])
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const addMatch = async () => {
-    if (!homeTeamId || !awayTeamId) {
-      toast({ title: 'Select both teams', variant: 'destructive' })
-      return
-    }
-    if (homeTeamId === awayTeamId) {
-      toast({ title: 'Teams must be different', variant: 'destructive' })
-      return
-    }
-    setSubmitting(true)
-    const { error } = await supabase.from('matches').insert({
-      home_team_id: homeTeamId,
-      away_team_id: awayTeamId,
-      stage,
-      match_date: matchDate || null,
-    })
-    setSubmitting(false)
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
-      return
-    }
-    toast({ title: 'Match added', variant: 'success' })
-    setOpen(false)
-    setHomeTeamId('')
-    setAwayTeamId('')
-    setStage('group')
-    setMatchDate('')
-    void load()
-  }
-
-  const updateScore = async (matchId: string, homeGoals: number, awayGoals: number) => {
-    const { error } = await supabase
-      .from('matches')
-      .update({ home_goals: homeGoals, away_goals: awayGoals, is_completed: true })
-      .eq('id', matchId)
-    if (error) {
-      toast({ title: 'Error updating score', description: error.message, variant: 'destructive' })
-    } else {
-      toast({ title: 'Score updated', variant: 'success' })
-      void load()
-    }
-  }
-
+// --- API Sync Tab ---
+function MatchCard({ match }: { match: MatchRow }) {
+  const hasPens = match.home_penalty_goals > 0 || match.away_penalty_goals > 0
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Match
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Match</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <Label>Home Team</Label>
-                <Select value={homeTeamId} onValueChange={setHomeTeamId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select home team…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.flag} {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Away Team</Label>
-                <Select value={awayTeamId} onValueChange={setAwayTeamId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select away team…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.flag} {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Stage</Label>
-                <Select value={stage} onValueChange={(v) => setStage(v as Stage)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STAGES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {STAGE_LABELS[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Match Date (optional)</Label>
-                <Input
-                  type="datetime-local"
-                  value={matchDate}
-                  onChange={(e) => setMatchDate(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => void addMatch()} disabled={submitting}>
-                {submitting ? 'Adding…' : 'Add Match'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading…</div>
-      ) : matches.length === 0 ? (
-        <p className="text-center py-12 text-muted-foreground">No matches recorded yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {matches.map((m) => (
-            <MatchCard key={m.id} match={m} onUpdateScore={updateScore} />
-          ))}
+    <div className="p-3 rounded-lg border bg-card text-sm">
+      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+        <span>{STAGE_LABELS[match.stage]}</span>
+        <div className="flex items-center gap-2">
+          {match.match_date && <span>{new Date(match.match_date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+          {match.is_completed && <Badge variant="success" className="text-xs">Final</Badge>}
         </div>
-      )}
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="flex-1 flex items-center justify-end gap-1.5 text-right">
+          {match.home_team.name}
+          <FlagImg emoji={match.home_team.flag} size={18} />
+        </span>
+        <span className="font-bold text-base w-20 text-center shrink-0">
+          {match.is_completed
+            ? `${match.home_goals ?? '-'} – ${match.away_goals ?? '-'}${hasPens ? ` (${match.home_penalty_goals}–${match.away_penalty_goals} pens)` : ''}`
+            : 'vs'}
+        </span>
+        <span className="flex-1 flex items-center gap-1.5">
+          <FlagImg emoji={match.away_team.flag} size={18} />
+          {match.away_team.name}
+        </span>
+      </div>
     </div>
   )
 }
 
-function MatchCard({
-  match,
-  onUpdateScore,
-}: {
-  match: MatchRow
-  onUpdateScore: (id: string, home: number, away: number) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [homeGoals, setHomeGoals] = useState(String(match.home_goals ?? ''))
-  const [awayGoals, setAwayGoals] = useState(String(match.away_goals ?? ''))
+function ApiSyncPanel() {
+  const [syncing, setSyncing] = useState(false)
+  const [upcoming, setUpcoming] = useState<MatchRow[]>([])
+  const [completed, setCompleted] = useState<MatchRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const MATCH_SELECT = 'id, stage, home_goals, away_goals, home_penalty_goals, away_penalty_goals, is_completed, match_date, home_team:teams!matches_home_team_id_fkey(id, name, flag, level, created_at), away_team:teams!matches_away_team_id_fkey(id, name, flag, level, created_at)'
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data: m } = await supabase
+      .from('matches')
+      .select(MATCH_SELECT)
+      .order('match_date')
+    const all = (m ?? []) as unknown as MatchRow[]
+    setCompleted(all.filter((x) => x.is_completed).reverse())
+    setUpcoming(all.filter((x) => !x.is_completed))
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { void load() }, [load])
+
+  const sync = async () => {
+    setSyncing(true)
+    try {
+      const apiMatches = await fetchWorldCupMatches()
+      const { data: dbTeams } = await supabase.from('teams').select('id, name')
+      const nameMap = buildNameMap((dbTeams ?? []) as { id: string; name: string }[])
+
+      let synced = 0
+      const advancement = new Map<string, Set<Stage>>()
+      const finalWinners: string[] = []
+
+      for (const m of apiMatches) {
+        const stage = mapApiStage(m.stage)
+        if (!stage) continue
+
+        const homeId = resolveTeamId(m.homeTeam.name, m.homeTeam.shortName, nameMap)
+        const awayId = resolveTeamId(m.awayTeam.name, m.awayTeam.shortName, nameMap)
+        if (!homeId || !awayId) continue
+
+        const isFinished = m.status === 'FINISHED'
+        const rec = {
+          external_id: String(m.id),
+          home_team_id: homeId,
+          away_team_id: awayId,
+          stage,
+          match_date: m.utcDate,
+          is_completed: isFinished,
+          home_goals: m.score.fullTime.home,
+          away_goals: m.score.fullTime.away,
+          home_penalty_goals: m.score.penalties.home ?? 0,
+          away_penalty_goals: m.score.penalties.away ?? 0,
+        }
+
+        const { error } = await supabase.from('matches').upsert(rec, { onConflict: 'external_id' })
+        if (!error) synced++
+
+        if (stage !== 'group') {
+          for (const tid of [homeId, awayId]) {
+            if (!advancement.has(tid)) advancement.set(tid, new Set())
+            advancement.get(tid)!.add(stage)
+          }
+        }
+
+        if (stage === 'final' && isFinished) {
+          if (m.score.winner === 'HOME_TEAM') finalWinners.push(homeId)
+          else if (m.score.winner === 'AWAY_TEAM') finalWinners.push(awayId)
+        }
+      }
+
+      for (const [teamId, stages] of advancement) {
+        const inFinal = stages.has('final')
+        const inSF = stages.has('semi_final') || inFinal
+        const inQF = stages.has('quarter_final') || inSF
+        const inR16 = stages.has('round_of_16') || inQF
+        const inR32 = stages.has('round_of_32') || inR16
+
+        await supabase.from('team_advancement').upsert({
+          team_id: teamId,
+          advanced_to_round_32: inR32,
+          advanced_to_round_16: inR16,
+          advanced_to_quarters: inQF,
+          advanced_to_semis: inSF,
+          advanced_to_final: inFinal,
+          won_world_cup: finalWinners.includes(teamId),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'team_id' })
+      }
+
+      toast({ title: `Synced ${synced} matches`, description: 'Advancement updated automatically.', variant: 'success' })
+      void load()
+    } catch (err) {
+      toast({ title: 'Sync failed', description: err instanceof Error ? err.message : 'Unknown', variant: 'destructive' })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   return (
-    <div className="p-3 rounded-lg border bg-card text-sm">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-xs text-muted-foreground">{STAGE_LABELS[match.stage]}</span>
-        {match.match_date && (
-          <span className="text-xs text-muted-foreground">
-            {new Date(match.match_date).toLocaleDateString()}
-          </span>
-        )}
-        {match.is_completed && (
-          <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5">
-            Final
-          </span>
-        )}
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium">Live Match Data</p>
+          <p className="text-xs text-muted-foreground">
+            {hasApiKey ? 'Connected to football-data.org' : 'Set VITE_FOOTBALL_API_KEY to enable sync'}
+          </p>
+        </div>
+        <Button size="sm" onClick={() => void sync()} disabled={syncing || !hasApiKey}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Syncing…' : 'Sync Now'}
+        </Button>
       </div>
-      <div className="flex items-center gap-3 mt-2">
-        <span className="flex-1 text-right">
-          {match.home_team.flag} {match.home_team.name}
-        </span>
-        {match.is_completed ? (
-          <span className="font-bold text-base">
-            {match.home_goals} – {match.away_goals}
-          </span>
-        ) : editing ? (
-          <div className="flex items-center gap-1">
-            <Input
-              type="number"
-              min={0}
-              className="w-14 h-7 text-center"
-              value={homeGoals}
-              onChange={(e) => setHomeGoals(e.target.value)}
-            />
-            <span>–</span>
-            <Input
-              type="number"
-              min={0}
-              className="w-14 h-7 text-center"
-              value={awayGoals}
-              onChange={(e) => setAwayGoals(e.target.value)}
-            />
-            <Button
-              size="sm"
-              className="h-7 px-2"
-              onClick={() => {
-                onUpdateScore(match.id, Number(homeGoals), Number(awayGoals))
-                setEditing(false)
-              }}
-            >
-              Save
-            </Button>
+
+      {!hasApiKey && (
+        <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
+          <p className="font-semibold">API key required</p>
+          <p className="text-xs mt-0.5">
+            Get a free key at football-data.org, then add <code>VITE_FOOTBALL_API_KEY</code> to your GitHub secrets and Netlify env vars.
+          </p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground">Loading…</div>
+      ) : (
+        <>
+          <div>
+            <p className="text-sm font-semibold mb-2">Upcoming ({upcoming.length})</p>
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-center text-muted-foreground py-4">No upcoming matches synced yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {upcoming.slice(0, 15).map((m) => <MatchCard key={m.id} match={m} />)}
+                {upcoming.length > 15 && (
+                  <p className="text-xs text-center text-muted-foreground">+{upcoming.length - 15} more</p>
+                )}
+              </div>
+            )}
           </div>
-        ) : (
-          <Button variant="outline" size="sm" className="h-7" onClick={() => setEditing(true)}>
-            Set Score
-          </Button>
-        )}
-        <span className="flex-1">
-          {match.away_team.flag} {match.away_team.name}
-        </span>
-      </div>
+
+          <div>
+            <p className="text-sm font-semibold mb-2">Completed ({completed.length})</p>
+            {completed.length === 0 ? (
+              <p className="text-sm text-center text-muted-foreground py-4">No completed matches yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {completed.map((m) => <MatchCard key={m.id} match={m} />)}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -705,20 +513,16 @@ export function Admin() {
         <h2 className="text-lg font-semibold">Admin Panel</h2>
       </div>
 
-      <Tabs defaultValue="advancement">
+      <Tabs defaultValue="entries">
         <TabsList>
-          <TabsTrigger value="advancement">Team Advancement</TabsTrigger>
           <TabsTrigger value="entries">Entries</TabsTrigger>
-          <TabsTrigger value="matches">Matches</TabsTrigger>
+          <TabsTrigger value="matches">Match Sync</TabsTrigger>
         </TabsList>
-        <TabsContent value="advancement" className="mt-4">
-          <AdvancementPanel />
-        </TabsContent>
         <TabsContent value="entries" className="mt-4">
           <EntriesPanel />
         </TabsContent>
         <TabsContent value="matches" className="mt-4">
-          <MatchesPanel />
+          <ApiSyncPanel />
         </TabsContent>
       </Tabs>
     </div>

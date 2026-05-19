@@ -29,12 +29,14 @@ jobs:
 
       - name: Deploy to Netlify (preview)
         if: github.event_name == 'pull_request'
-        run: npx netlify-cli deploy --dir=dist --site=${{ secrets.NETLIFY_SITE_ID }}
+        run: npx netlify-cli deploy --dir=dist
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
       - name: Deploy to Netlify (production)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: npx netlify-cli deploy --dir=dist --prod --site=${{ secrets.NETLIFY_SITE_ID }}
+        run: npx netlify-cli deploy --dir=dist --prod
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

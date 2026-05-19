@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Users, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { Plus, Users, ChevronDown, ChevronUp, Info, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, ENTRY_FEE } from '@/types'
 import type { Team, Participant } from '@/types'
@@ -56,6 +56,21 @@ export function Entries() {
   const [accessCode, setAccessCode] = useState('')
   const [entryName, setEntryName] = useState('')
   const [picks, setPicks] = useState<Picks>(EMPTY_PICKS)
+
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyLabel, setHistoryLabel] = useState('')
+  const [historyData, setHistoryData] = useState<{ id: string; changed_at: string; changed_by: string; previous_teams: { team_id: string; team_name: string; flag: string; level: number }[]; new_teams: { team_id: string; team_name: string; flag: string; level: number }[] }[]>([])
+
+  const loadHistory = useCallback(async (entryId: string, label: string) => {
+    const { data } = await supabase
+      .from('entry_changes')
+      .select('*')
+      .eq('entry_id', entryId)
+      .order('changed_at', { ascending: false })
+    setHistoryData((data ?? []) as typeof historyData)
+    setHistoryLabel(label)
+    setHistoryOpen(true)
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -315,9 +330,20 @@ export function Entries() {
                             )
                           })}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Submitted {new Date(entry.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-muted-foreground">
+                            Submitted {new Date(entry.created_at).toLocaleDateString()}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs text-muted-foreground"
+                            onClick={() => void loadHistory(entry.id, `${name}${entry.entry_name ? ` · ${entry.entry_name}` : ''}`)}
+                          >
+                            <History className="h-3 w-3 mr-1" />
+                            History
+                          </Button>
+                        </div>
                       </div>
                     )
                   })}
@@ -330,6 +356,50 @@ export function Entries() {
       <p className="text-xs text-center text-muted-foreground pb-4">
         Max {MAX_ENTRIES_PER_PERSON} entries per person · {TEAMS_PER_TIER} teams per tier
       </p>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Change History</DialogTitle>
+            <DialogDescription>{historyLabel}</DialogDescription>
+          </DialogHeader>
+          {historyData.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No changes recorded — original picks still active.</p>
+          ) : (
+            <div className="space-y-3">
+              {historyData.map((change) => {
+                const changedTiers = TIERS.filter((tier) => {
+                  const prev = change.previous_teams.filter((t) => t.level === tier).map((t) => t.team_id).sort().join(',')
+                  const next = change.new_teams.filter((t) => t.level === tier).map((t) => t.team_id).sort().join(',')
+                  return prev !== next
+                })
+                return (
+                  <div key={change.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{new Date(change.changed_at).toLocaleString()}</span>
+                      <span>{change.changed_by === 'admin' ? '⚙️ Admin' : '👤 User'}</span>
+                    </div>
+                    {changedTiers.map((tier) => {
+                      const prev = change.previous_teams.filter((t) => t.level === tier)
+                      const next = change.new_teams.filter((t) => t.level === tier)
+                      return (
+                        <div key={tier} className="text-xs">
+                          <p className="font-medium text-muted-foreground mb-0.5">Tier {tier}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-red-500 line-through">{prev.map((t) => `${t.flag} ${t.team_name}`).join(', ')}</span>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="text-green-600">{next.map((t) => `${t.flag} ${t.team_name}`).join(', ')}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

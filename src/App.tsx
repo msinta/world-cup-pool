@@ -2,6 +2,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Toaster } from '@/components/ui/toaster'
 import { Leaderboard } from '@/components/Leaderboard'
 import { Entries } from '@/components/Entries'
+import { Matches } from '@/components/Matches'
 import { Admin } from '@/components/Admin'
 import { Rules } from '@/components/Rules'
 
@@ -20,9 +21,10 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-4 py-6">
         <Tabs defaultValue="leaderboard">
-          <TabsList className="mb-6 w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+          <TabsList className="mb-6 w-full grid grid-cols-5 sm:inline-flex">
             <TabsTrigger value="leaderboard">🏆 Standings</TabsTrigger>
             <TabsTrigger value="entries">📋 Entries</TabsTrigger>
+            <TabsTrigger value="matches">⚽ Matches</TabsTrigger>
             <TabsTrigger value="rules">📖 Rules</TabsTrigger>
             <TabsTrigger value="admin">⚙️ Admin</TabsTrigger>
           </TabsList>
@@ -32,6 +34,9 @@ export default function App() {
           </TabsContent>
           <TabsContent value="entries">
             <Entries />
+          </TabsContent>
+          <TabsContent value="matches">
+            <Matches />
           </TabsContent>
           <TabsContent value="rules">
             <Rules />

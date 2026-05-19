@@ -3,7 +3,7 @@ import { Shield, Trash2, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LEVEL_LABELS, STAGE_LABELS } from '@/types'
 import type { Team, Stage, Participant } from '@/types'
-import { hasApiKey, fetchWorldCupMatches, mapApiStage, resolveTeamId, buildNameMap } from '@/lib/football-api'
+import { fetchWorldCupMatches, mapApiStage, resolveTeamId, buildNameMap } from '@/lib/football-api'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -447,24 +447,13 @@ function ApiSyncPanel() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">Live Match Data</p>
-          <p className="text-xs text-muted-foreground">
-            {hasApiKey ? 'Connected to football-data.org' : 'Set VITE_FOOTBALL_API_KEY to enable sync'}
-          </p>
+          <p className="text-xs text-muted-foreground">football-data.org · auto-syncs every 2 hours</p>
         </div>
-        <Button size="sm" onClick={() => void sync()} disabled={syncing || !hasApiKey}>
+        <Button size="sm" onClick={() => void sync()} disabled={syncing}>
           <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
           {syncing ? 'Syncing…' : 'Sync Now'}
         </Button>
       </div>
-
-      {!hasApiKey && (
-        <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
-          <p className="font-semibold">API key required</p>
-          <p className="text-xs mt-0.5">
-            Get a free key at football-data.org, then add <code>VITE_FOOTBALL_API_KEY</code> to your GitHub secrets and Netlify env vars.
-          </p>
-        </div>
-      )}
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading…</div>

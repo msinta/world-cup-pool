@@ -73,30 +73,69 @@ export interface TeamAdvancement {
   updated_at: string
 }
 
-export const POINTS = {
+// Advancement bonus points (per the rules sheet)
+export const ADVANCEMENT_POINTS = {
   advanced_to_round_32: 2,
-  advanced_to_round_16: 4,
-  advanced_to_quarters: 8,
-  advanced_to_semis: 16,
-  advanced_to_final: 32,
-  won_world_cup: 64,
+  advanced_to_round_16: 2,
+  advanced_to_quarters: 3,
+  advanced_to_semis: 4,
+  advanced_to_final: 5,
+  won_world_cup: 10,
 } as const
 
-export type AdvancementKey = keyof typeof POINTS
+export type AdvancementKey = keyof typeof ADVANCEMENT_POINTS
 
-export function calcTeamPoints(adv: TeamAdvancement | undefined): number {
+// Keep POINTS as alias for Admin panel display
+export const POINTS = ADVANCEMENT_POINTS
+
+export function calcAdvancementPoints(adv: TeamAdvancement | undefined): number {
   if (!adv) return 0
-  let total = 0
-  const keys = Object.keys(POINTS) as AdvancementKey[]
-  for (const key of keys) {
-    if (adv[key]) {
-      total += POINTS[key]
+  return (Object.keys(ADVANCEMENT_POINTS) as AdvancementKey[]).reduce(
+    (sum, key) => sum + (adv[key] ? ADVANCEMENT_POINTS[key] : 0),
+    0,
+  )
+}
+
+// calcTeamPoints is an alias kept for backward compat
+export const calcTeamPoints = calcAdvancementPoints
+
+export interface MatchResult {
+  resultPts: number
+  goalPts: number
+  goalsScored: number
+}
+
+export function calcMatchPoints(teamId: string, match: Match): MatchResult {
+  const isHome = match.home_team_id === teamId
+  const goalsFor = isHome ? (match.home_goals ?? 0) : (match.away_goals ?? 0)
+  const goalsAgainst = isHome ? (match.away_goals ?? 0) : (match.home_goals ?? 0)
+  const penFor = isHome ? match.home_penalty_goals : match.away_penalty_goals
+  const penAgainst = isHome ? match.away_penalty_goals : match.home_penalty_goals
+
+  const totalScored = goalsFor + penFor
+  const totalConceded = goalsAgainst + penAgainst
+
+  let resultPts = 0
+  if (goalsFor > goalsAgainst) {
+    resultPts = 3
+  } else if (goalsFor === goalsAgainst) {
+    if (penFor > penAgainst) {
+      resultPts = 3 // won on penalties
+    } else if (penFor < penAgainst) {
+      resultPts = 0 // lost on penalties
+    } else {
+      resultPts = 1 // true draw (group stage)
     }
   }
-  return total
+
+  return { resultPts, goalPts: totalScored - totalConceded, goalsScored: totalScored }
 }
 
 export const ENTRY_FEE = 20
+export const MAX_ENTRIES_PER_PERSON = 5
+export const TEAMS_PER_TIER = 2 // pick 2 teams from each of 6 tiers = 12 total
+
+export const PRIZE_SPLIT = { first: 0.6, second: 0.3, third: 0.1 }
 
 export const LEVEL_LABELS: Record<number, string> = {
   1: 'Tier 1 — Elite',

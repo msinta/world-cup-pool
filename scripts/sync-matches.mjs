@@ -27,6 +27,7 @@ const ALIASES = {
 }
 
 function norm(s) {
+  if (!s) return ''
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').trim()
 }
 

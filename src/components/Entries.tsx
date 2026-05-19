@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Users, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, ENTRY_FEE } from '@/types'
 import type { Team, Participant } from '@/types'
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FlagImg } from '@/components/ui/flag-img'
 
 interface EntryTeamRow {
   id: string
@@ -39,10 +40,7 @@ interface EntryRow {
 }
 
 const TIERS = [1, 2, 3, 4, 5, 6]
-
-// picks[tier][slot] = teamId (slot 0 or 1)
 type Picks = Record<number, [string, string]>
-
 const EMPTY_PICKS: Picks = { 1: ['', ''], 2: ['', ''], 3: ['', ''], 4: ['', ''], 5: ['', ''], 6: ['', ''] }
 
 export function Entries() {
@@ -79,9 +77,7 @@ export function Entries() {
     }
   }, [])
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  useEffect(() => { void load() }, [load])
 
   const byTier = (tier: number) => teams.filter((t) => t.level === tier)
 
@@ -100,25 +96,13 @@ export function Entries() {
     setPicks(EMPTY_PICKS)
   }
 
-  const validate = (): boolean => {
-    if (!participantName.trim()) {
-      toast({ title: 'Name required', variant: 'destructive' })
-      return false
-    }
-    if (!accessCode.trim()) {
-      toast({ title: 'Access code required', variant: 'destructive' })
-      return false
-    }
+  const validate = () => {
+    if (!participantName.trim()) { toast({ title: 'Name required', variant: 'destructive' }); return false }
+    if (!accessCode.trim()) { toast({ title: 'Access code required', variant: 'destructive' }); return false }
     for (const tier of TIERS) {
       const [a, b] = picks[tier]
-      if (!a || !b) {
-        toast({ title: `Select 2 teams from Tier ${tier}`, variant: 'destructive' })
-        return false
-      }
-      if (a === b) {
-        toast({ title: `Pick 2 different teams in Tier ${tier}`, variant: 'destructive' })
-        return false
-      }
+      if (!a || !b) { toast({ title: `Select 2 teams from Tier ${tier}`, variant: 'destructive' }); return false }
+      if (a === b) { toast({ title: `Pick 2 different teams in Tier ${tier}`, variant: 'destructive' }); return false }
     }
     return true
   }
@@ -127,7 +111,6 @@ export function Entries() {
     if (!validate()) return
     setSubmitting(true)
     try {
-      // Check how many entries this participant already has
       const { data: existing } = await supabase
         .from('participants')
         .select('id')
@@ -135,20 +118,14 @@ export function Entries() {
         .maybeSingle()
 
       let participantId: string
-
       if (existing) {
         participantId = existing.id as string
-        // Count existing entries
         const { count } = await supabase
           .from('entries')
           .select('id', { count: 'exact', head: true })
           .eq('participant_id', participantId)
         if ((count ?? 0) >= MAX_ENTRIES_PER_PERSON) {
-          toast({
-            title: 'Maximum entries reached',
-            description: `You can only have ${MAX_ENTRIES_PER_PERSON} entries.`,
-            variant: 'destructive',
-          })
+          toast({ title: 'Maximum entries reached', description: `Max ${MAX_ENTRIES_PER_PERSON} entries per person.`, variant: 'destructive' })
           return
         }
       } else {
@@ -169,10 +146,7 @@ export function Entries() {
       if (ee) throw ee
 
       const entryTeams = TIERS.flatMap((tier) =>
-        picks[tier].map((teamId) => ({
-          entry_id: (entry as { id: string }).id,
-          team_id: teamId,
-        })),
+        picks[tier].map((teamId) => ({ entry_id: (entry as { id: string }).id, team_id: teamId })),
       )
       const { error: ete } = await supabase.from('entry_teams').insert(entryTeams)
       if (ete) throw ete
@@ -182,26 +156,18 @@ export function Entries() {
       resetForm()
       void load()
     } catch (err) {
-      toast({
-        title: 'Error submitting entry',
-        description: err instanceof Error ? err.message : 'Something went wrong',
-        variant: 'destructive',
-      })
+      toast({ title: 'Error submitting entry', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
   }
 
-  // Group entries by participant for display
-  const grouped = entries.reduce<Record<string, { name: string; entries: EntryRow[] }>>(
-    (acc, entry) => {
-      const name = entry.participant?.name ?? 'Unknown'
-      if (!acc[name]) acc[name] = { name, entries: [] }
-      acc[name].entries.push(entry)
-      return acc
-    },
-    {},
-  )
+  const grouped = entries.reduce<Record<string, { name: string; entries: EntryRow[] }>>((acc, entry) => {
+    const name = entry.participant?.name ?? 'Unknown'
+    if (!acc[name]) acc[name] = { name, entries: [] }
+    acc[name].entries.push(entry)
+    return acc
+  }, {})
 
   return (
     <div className="space-y-5">
@@ -209,7 +175,7 @@ export function Entries() {
         <div>
           <p className="font-semibold">{entries.length} {entries.length === 1 ? 'Entry' : 'Entries'}</p>
           <p className="text-sm text-muted-foreground">
-            Pick 2 teams per tier · 12 teams total · C${ENTRY_FEE} cash
+            2 teams per tier · 12 teams total · C${ENTRY_FEE} cash to Ed Akkawi
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
@@ -223,7 +189,7 @@ export function Entries() {
             <DialogHeader>
               <DialogTitle>Submit Your Entry</DialogTitle>
               <DialogDescription>
-                Pick <strong>2 teams from each tier</strong> (12 total). Entry fee: C${ENTRY_FEE} cash.
+                Pick <strong>2 teams from each tier</strong> (12 total). Entry fee: C${ENTRY_FEE} cash to Ed Akkawi.
               </DialogDescription>
             </DialogHeader>
 
@@ -231,32 +197,28 @@ export function Entries() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="pname">Your Name *</Label>
-                  <Input
-                    id="pname"
-                    placeholder="Jane Smith"
-                    value={participantName}
-                    onChange={(e) => setParticipantName(e.target.value)}
-                  />
+                  <Input id="pname" placeholder="Jane Smith" value={participantName} onChange={(e) => setParticipantName(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="acode">Access Code *</Label>
-                  <Input
-                    id="acode"
-                    placeholder="Remember this!"
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                  />
+                  <Input id="acode" placeholder="Choose a password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Access code info box */}
+              <div className="flex gap-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2.5 text-sm text-blue-800">
+                <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Remember your access code!</p>
+                  <p className="text-blue-700 text-xs mt-0.5">
+                    You'll need it to edit your picks before the tournament starts. Treat it like a password — if you forget it you won't be able to make changes.
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="ename">Entry Nickname (optional)</Label>
-                <Input
-                  id="ename"
-                  placeholder="e.g. The Dark Horses"
-                  value={entryName}
-                  onChange={(e) => setEntryName(e.target.value)}
-                />
+                <Input id="ename" placeholder="e.g. The Dark Horses" value={entryName} onChange={(e) => setEntryName(e.target.value)} />
               </div>
 
               <div className="border-t pt-4 space-y-4">
@@ -268,22 +230,17 @@ export function Entries() {
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {([0, 1] as const).map((slot) => (
-                        <Select
-                          key={slot}
-                          value={picks[tier][slot]}
-                          onValueChange={(v) => setPick(tier, slot, v)}
-                        >
+                        <Select key={slot} value={picks[tier][slot]} onValueChange={(v) => setPick(tier, slot, v)}>
                           <SelectTrigger className="text-sm">
                             <SelectValue placeholder={`Team ${slot + 1}`} />
                           </SelectTrigger>
                           <SelectContent>
                             {byTier(tier).map((team) => (
-                              <SelectItem
-                                key={team.id}
-                                value={team.id}
-                                disabled={picks[tier][slot === 0 ? 1 : 0] === team.id}
-                              >
-                                {team.flag} {team.name}
+                              <SelectItem key={team.id} value={team.id} disabled={picks[tier][slot === 0 ? 1 : 0] === team.id}>
+                                <span className="flex items-center gap-2">
+                                  <FlagImg emoji={team.flag} size={18} />
+                                  {team.name}
+                                </span>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -297,7 +254,7 @@ export function Entries() {
 
             <DialogFooter className="pt-2">
               <Button onClick={() => void handleSubmit()} disabled={submitting} className="w-full">
-                {submitting ? 'Submitting…' : `Submit Entry (C$${ENTRY_FEE} cash)`}
+                {submitting ? 'Submitting…' : `Submit Entry (C$${ENTRY_FEE} cash to Ed Akkawi)`}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -316,10 +273,7 @@ export function Entries() {
         <div className="space-y-3">
           {Object.values(grouped).map(({ name, entries: pEntries }) => (
             <Card key={name}>
-              <button
-                className="w-full text-left"
-                onClick={() => setExpanded(expanded === name ? null : name)}
-              >
+              <button className="w-full text-left" onClick={() => setExpanded(expanded === name ? null : name)}>
                 <CardHeader className="py-3 px-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold">{name}</CardTitle>
@@ -327,37 +281,32 @@ export function Entries() {
                       <span className="text-sm text-muted-foreground">
                         {pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'}
                       </span>
-                      {expanded === name ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
+                      {expanded === name ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </div>
                   </div>
                 </CardHeader>
               </button>
 
               {expanded === name && (
-                <CardContent className="pt-0 px-4 pb-4 space-y-4">
+                <CardContent className="pt-0 px-4 pb-4 space-y-5">
                   {pEntries.map((entry) => {
                     const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
                     return (
                       <div key={entry.id}>
                         {entry.entry_name && (
-                          <p className="text-sm font-medium mb-2 text-muted-foreground">
-                            📋 {entry.entry_name}
-                          </p>
+                          <p className="text-sm font-medium mb-2 text-muted-foreground">📋 {entry.entry_name}</p>
                         )}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {TIERS.map((tier) => {
                             const tierTeams = sorted.filter((et) => et.team.level === tier)
                             return (
                               <div key={tier} className="bg-muted/50 rounded-lg px-2.5 py-2">
-                                <p className="text-xs text-muted-foreground mb-1">Tier {tier}</p>
+                                <p className="text-xs text-muted-foreground mb-1.5">Tier {tier}</p>
                                 {tierTeams.map(({ team }) => (
-                                  <p key={team.id} className="text-sm">
-                                    {team.flag} {team.name}
-                                  </p>
+                                  <div key={team.id} className="flex items-center gap-1.5 mb-1">
+                                    <FlagImg emoji={team.flag} size={20} />
+                                    <span className="text-sm">{team.name}</span>
+                                  </div>
                                 ))}
                               </div>
                             )
@@ -375,7 +324,6 @@ export function Entries() {
           ))}
         </div>
       )}
-
       <p className="text-xs text-center text-muted-foreground pb-4">
         Max {MAX_ENTRIES_PER_PERSON} entries per person · {TEAMS_PER_TIER} teams per tier
       </p>

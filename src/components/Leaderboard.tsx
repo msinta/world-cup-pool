@@ -1,16 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Trophy, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import {
-  calcAdvancementPoints,
-  calcMatchPoints,
-  ENTRY_FEE,
-  PRIZE_SPLIT,
-} from '@/types'
+import { calcAdvancementPoints, calcMatchPoints, ENTRY_FEE, PRIZE_SPLIT } from '@/types'
 import type { Team, TeamAdvancement, Match, Participant } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { FlagImg } from '@/components/ui/flag-img'
 
 interface EntryTeamRow {
   id: string
@@ -68,7 +64,6 @@ export function Leaderboard() {
         (advs ?? []).map((a: TeamAdvancement) => [a.team_id, a]),
       )
 
-      // Build team -> matches map
       const teamMatches = new Map<string, Match[]>()
       for (const m of (matches ?? []) as Match[]) {
         for (const tid of [m.home_team_id, m.away_team_id]) {
@@ -121,7 +116,6 @@ export function Leaderboard() {
 
   return (
     <div className="space-y-5">
-      {/* Prize pool */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: '🥇 1st Place', value: `$${prizes[0]}`, sub: '60%' },
@@ -161,12 +155,13 @@ export function Leaderboard() {
         <div className="space-y-2">
           {results.map((item, i) => {
             const isExpanded = expanded === item.entry.id
+            const hasPoints = item.totalPoints > 0
             const name = item.entry.participant?.name ?? '—'
             const entryLabel = item.entry.entry_name ? ` · ${item.entry.entry_name}` : ''
             return (
               <Card
                 key={item.entry.id}
-                className={`transition-all ${i === 0 ? 'border-yellow-400 border-2' : ''}`}
+                className={`transition-all ${i === 0 && hasPoints ? 'border-yellow-400 border-2' : ''}`}
               >
                 <button
                   className="w-full text-left"
@@ -174,22 +169,24 @@ export function Leaderboard() {
                 >
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl w-8 text-center shrink-0">{medal(i)}</span>
+                      <span className="text-xl w-8 text-center shrink-0">
+                        {hasPoints ? medal(i) : `#${i + 1}`}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold truncate">
                           {name}
                           <span className="font-normal text-muted-foreground text-sm">{entryLabel}</span>
                         </p>
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-2 mt-1.5">
                           {item.teamScores.map(({ team, total }) => (
                             <span
                               key={team.id}
-                              className="text-xs bg-muted rounded-full px-2 py-0.5 inline-flex items-center gap-1"
+                              className="inline-flex items-center gap-1.5 bg-muted rounded-md px-2 py-1"
                             >
-                              {team.flag}
-                              <span className="hidden sm:inline">{team.name}</span>
+                              <FlagImg emoji={team.flag} size={22} />
+                              <span className="text-xs hidden sm:inline">{team.name}</span>
                               {total > 0 && (
-                                <span className="text-green-600 font-semibold">+{total}</span>
+                                <span className="text-xs text-green-600 font-bold">+{total}</span>
                               )}
                             </span>
                           ))}
@@ -210,26 +207,27 @@ export function Leaderboard() {
                   <CardContent className="pt-0 px-4 pb-4">
                     <div className="border-t pt-3 mt-1 space-y-1">
                       {item.teamScores.map(({ team, advPts, matchPts, total }) => (
-                        <div
-                          key={team.id}
-                          className="flex items-center gap-2 text-sm py-0.5"
-                        >
+                        <div key={team.id} className="flex items-center gap-2 text-sm py-0.5">
                           <span className="text-xs text-muted-foreground w-14 shrink-0">
                             Tier {team.level}
                           </span>
-                          <span>{team.flag}</span>
+                          <FlagImg emoji={team.flag} size={20} />
                           <span className="flex-1">{team.name}</span>
                           <div className="flex gap-3 text-xs text-muted-foreground">
                             {matchPts !== 0 && (
                               <span className={matchPts > 0 ? 'text-green-600' : 'text-red-500'}>
-                                {matchPts > 0 ? '+' : ''}{matchPts} match
+                                {matchPts > 0 ? '+' : ''}
+                                {matchPts} match
                               </span>
                             )}
                             {advPts > 0 && (
                               <span className="text-blue-600">+{advPts} adv</span>
                             )}
                           </div>
-                          <Badge variant={total > 0 ? 'success' : 'outline'} className="w-14 justify-center">
+                          <Badge
+                            variant={total > 0 ? 'success' : 'outline'}
+                            className="w-14 justify-center"
+                          >
                             {total > 0 ? `+${total}` : total === 0 ? '0' : total}
                           </Badge>
                         </div>

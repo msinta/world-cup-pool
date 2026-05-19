@@ -68,8 +68,7 @@ export function Rules() {
           <div>
             <h3 className="font-semibold text-base mb-1">5. Entry Fee</h3>
             <p className="text-muted-foreground">
-              C${ENTRY_FEE}.00 per entry (cash only). Open to Guardian Capital employees and
-              affiliates only.
+              C${ENTRY_FEE}.00 per entry (cash only). Please send <strong>Ed Akkawi</strong> cash to participate.
             </p>
           </div>
 

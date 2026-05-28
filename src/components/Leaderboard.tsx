@@ -81,7 +81,7 @@ export function Leaderboard() {
             let goalsScored = 0
             for (const match of teamMatches.get(team.id) ?? []) {
               const r = calcMatchPoints(team.id, match)
-              matchPts += r.resultPts + r.goalPts
+              matchPts += r.resultPts
               goalsScored += r.goalsScored
             }
             return { team, advPts, matchPts, goalsScored, total: advPts + matchPts }
@@ -214,11 +214,8 @@ export function Leaderboard() {
                           <FlagImg emoji={team.flag} size={20} />
                           <span className="flex-1">{team.name}</span>
                           <div className="flex gap-3 text-xs text-muted-foreground">
-                            {matchPts !== 0 && (
-                              <span className={matchPts > 0 ? 'text-green-600' : 'text-red-500'}>
-                                {matchPts > 0 ? '+' : ''}
-                                {matchPts} match
-                              </span>
+                            {matchPts > 0 && (
+                              <span className="text-green-600">+{matchPts} match</span>
                             )}
                             {advPts > 0 && (
                               <span className="text-blue-600">+{advPts} adv</span>

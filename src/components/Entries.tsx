@@ -191,7 +191,7 @@ export function Entries() {
         <div>
           <p className="font-semibold">{entries.length} {entries.length === 1 ? 'Entry' : 'Entries'}</p>
           <p className="text-sm text-muted-foreground">
-            2 teams per tier · 12 teams total · C${ENTRY_FEE} cash to Ed Akkawi
+            2 teams per tier · 12 teams total · C${ENTRY_FEE} cash to Ben Lavallee
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
@@ -205,7 +205,7 @@ export function Entries() {
             <DialogHeader>
               <DialogTitle>Submit Your Entry</DialogTitle>
               <DialogDescription>
-                Pick <strong>2 teams from each tier</strong> (12 total). Entry fee: C${ENTRY_FEE} cash to Ed Akkawi.
+                Pick <strong>2 teams from each tier</strong> (12 total). Entry fee: C${ENTRY_FEE} cash to Ben Lavallee. Deadline: <strong>June 8 at 5 p.m. ET</strong>.
               </DialogDescription>
             </DialogHeader>
 
@@ -270,7 +270,7 @@ export function Entries() {
 
             <DialogFooter className="pt-2">
               <Button onClick={() => void handleSubmit()} disabled={submitting} className="w-full">
-                {submitting ? 'Submitting…' : `Submit Entry (C$${ENTRY_FEE} cash to Ed Akkawi)`}
+                {submitting ? 'Submitting…' : `Submit Entry (C$${ENTRY_FEE} cash to Ben Lavallee)`}
               </Button>
             </DialogFooter>
           </DialogContent>

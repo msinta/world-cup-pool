@@ -25,8 +25,8 @@ import {
 } from '@/components/ui/select'
 import { FlagImg } from '@/components/ui/flag-img'
 
-// Entries lock when the tournament begins
-const LOCK_DATE = new Date('2026-06-11T00:00:00Z')
+// Entries lock at the June 8 deadline (5 p.m. ET = 21:00 UTC)
+const LOCK_DATE = new Date('2026-06-08T21:00:00Z')
 const isLocked = () => new Date() >= LOCK_DATE
 
 const TIERS = [1, 2, 3, 4, 5, 6]
@@ -153,9 +153,14 @@ export function EditEntry({ allTeams, onDone }: { allTeams: Team[]; onDone: () =
         })
       )
 
-      // Delete old picks, insert new ones
-      const { error: de } = await supabase.from('entry_teams').delete().eq('entry_id', editingEntry.id)
-      if (de) throw de
+      // Fetch IDs first, then delete by PK to avoid 409 conflicts
+      const { data: existing } = await supabase
+        .from('entry_teams').select('id').eq('entry_id', editingEntry.id)
+      if (existing && existing.length > 0) {
+        const { error: de } = await supabase
+          .from('entry_teams').delete().in('id', existing.map((r: { id: string }) => r.id))
+        if (de) throw de
+      }
       const { error: ie } = await supabase.from('entry_teams').insert(
         TIERS.flatMap(tier => editPicks[tier].map(teamId => ({ entry_id: editingEntry.id, team_id: teamId })))
       )
@@ -206,7 +211,7 @@ export function EditEntry({ allTeams, onDone }: { allTeams: Team[]; onDone: () =
           <Lock className="h-5 w-5 text-orange-500 shrink-0" />
           <div>
             <p className="font-semibold text-orange-800">Entries are locked</p>
-            <p className="text-sm text-orange-700">The tournament has started — picks can no longer be changed.</p>
+            <p className="text-sm text-orange-700">The entry deadline has passed — picks can no longer be changed.</p>
           </div>
         </CardContent>
       </Card>
@@ -224,7 +229,7 @@ export function EditEntry({ allTeams, onDone }: { allTeams: Team[]; onDone: () =
               <div>
                 <p className="font-medium">Want to change your picks?</p>
                 <p className="text-sm text-muted-foreground">
-                  Entries can be edited until <strong>June 11, 2026</strong>. You'll need your name and access code.
+                  Entries can be edited until <strong>June 8, 2026 at 5 p.m. ET</strong>. You'll need your name and access code.
                 </p>
               </div>
             </div>
@@ -324,7 +329,7 @@ export function EditEntry({ allTeams, onDone }: { allTeams: Team[]; onDone: () =
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit — {editingEntry?.entry_name || 'Entry'}</DialogTitle>
-            <DialogDescription>Pick {TEAMS_PER_TIER} teams from each tier. Locked June 11.</DialogDescription>
+            <DialogDescription>Pick {TEAMS_PER_TIER} teams from each tier. Locked June 8 at 5 p.m. ET.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-1">
             {TIERS.map(tier => (

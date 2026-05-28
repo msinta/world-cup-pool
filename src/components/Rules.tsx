@@ -28,21 +28,26 @@ export function Rules() {
               <div>
                 <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Match Results</p>
                 <div className="grid grid-cols-1 gap-1">
-                  <PointRow icon="✅" label="Team wins a game" value="+3 pts" positive />
+                  <PointRow icon="✅" label="Team wins a game" value="+2 pts" positive />
                   <PointRow icon="🤝" label="Team draws a game" value="+1 pt" positive />
-                  <PointRow icon="⚽" label="Per goal scored (incl. penalty shootout)" value="+1 pt" positive />
-                  <PointRow icon="🔴" label="Per goal conceded (incl. penalty shootout)" value="−1 pt" negative />
                 </div>
               </div>
               <div>
-                <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Advancement Bonuses</p>
+                <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Group Stage Bonuses</p>
                 <div className="grid grid-cols-1 gap-1">
-                  <PointRow icon="🔵" label="Advances to Round of 32" value="+2 pts" positive />
-                  <PointRow icon="🔵" label="Advances to Round of 16" value="+2 pts" positive />
-                  <PointRow icon="🟡" label="Advances to Quarter-Finals" value="+3 pts" positive />
-                  <PointRow icon="🟠" label="Advances to Semi-Finals" value="+4 pts" positive />
-                  <PointRow icon="🔴" label="Advances to the Final" value="+5 pts" positive />
-                  <PointRow icon="🏆" label="Wins the World Cup" value="+10 pts" positive />
+                  <PointRow icon="🔵" label="Team advances to Round of 32" value="+3 pts" positive />
+                  <PointRow icon="🥈" label="Team finishes 2nd in group" value="+4 pts" positive />
+                  <PointRow icon="🥇" label="Team finishes 1st in group" value="+6 pts" positive />
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Knockout Advancement Bonuses</p>
+                <div className="grid grid-cols-1 gap-1">
+                  <PointRow icon="🔵" label="Advances to Round of 16" value="+8 pts" positive />
+                  <PointRow icon="🟡" label="Advances to Quarter-Finals" value="+10 pts" positive />
+                  <PointRow icon="🟠" label="Advances to Semi-Finals" value="+12 pts" positive />
+                  <PointRow icon="🔴" label="Advances to the Final" value="+15 pts" positive />
+                  <PointRow icon="🏆" label="Wins the World Cup" value="+25 pts" positive />
                 </div>
               </div>
             </div>
@@ -52,7 +57,7 @@ export function Rules() {
             <h3 className="font-semibold text-base mb-1">3. Tiebreaker</h3>
             <p className="text-muted-foreground">
               If two or more entrants are tied on points, the entrant whose teams scored the most
-              total goals wins. If still tied, winnings are split equally.
+              total goals wins. If still tied, winnings are split equally among those tied.
             </p>
           </div>
 
@@ -66,9 +71,19 @@ export function Rules() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-base mb-1">5. Entry Fee</h3>
+            <h3 className="font-semibold text-base mb-1">5. Entry Fee & Deadline</h3>
             <p className="text-muted-foreground">
-              C${ENTRY_FEE}.00 per entry (cash only). Please send <strong>Ed Akkawi</strong> cash to participate.
+              C${ENTRY_FEE}.00 per entry (cash only). Entry form and fee must be received by{' '}
+              <strong>Ben Lavallee</strong> (<a href="mailto:BLavallee@guardiancapital.com" className="underline">BLavallee@guardiancapital.com</a>){' '}
+              no later than <strong>5 p.m. on Monday, June 8, 2026</strong>.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-base mb-1">6. Rule Interpretations</h3>
+            <p className="text-muted-foreground">
+              Any rule interpretations not covered here will be dealt with by <strong>Edward Akkawi</strong>.
+              All decisions by Edward are final. Participation is open only to employees of Guardian Capital and its affiliates.
             </p>
           </div>
 
@@ -80,17 +95,9 @@ export function Rules() {
 }
 
 function PointRow({
-  icon,
-  label,
-  value,
-  positive,
-  negative,
+  icon, label, value, positive,
 }: {
-  icon: string
-  label: string
-  value: string
-  positive?: boolean
-  negative?: boolean
+  icon: string; label: string; value: string; positive?: boolean
 }) {
   return (
     <div className="flex items-center justify-between px-3 py-1.5 rounded-md bg-muted/50">
@@ -98,11 +105,7 @@ function PointRow({
         <span>{icon}</span>
         <span>{label}</span>
       </span>
-      <span
-        className={`font-bold text-sm ${positive ? 'text-green-600' : ''} ${negative ? 'text-red-600' : ''}`}
-      >
-        {value}
-      </span>
+      <span className={`font-bold text-sm ${positive ? 'text-green-600' : ''}`}>{value}</span>
     </div>
   )
 }

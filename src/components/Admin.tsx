@@ -392,10 +392,10 @@ function ApiSyncPanel() {
           stage,
           match_date: m.utcDate,
           is_completed: isFinished,
-          home_goals: m.score.fullTime.home,
-          away_goals: m.score.fullTime.away,
-          home_penalty_goals: m.score.penalties.home ?? 0,
-          away_penalty_goals: m.score.penalties.away ?? 0,
+          home_goals: m.score.fullTime?.home ?? null,
+          away_goals: m.score.fullTime?.away ?? null,
+          home_penalty_goals: m.score.penalties?.home ?? 0,
+          away_penalty_goals: m.score.penalties?.away ?? 0,
         }
 
         const { error } = await supabase.from('matches').upsert(rec, { onConflict: 'external_id' })

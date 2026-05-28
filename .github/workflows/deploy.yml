@@ -31,8 +31,8 @@ jobs:
 
       - name: Deploy to Netlify (preview)
         if: github.event_name == 'pull_request'
-        run: npx netlify-cli deploy --dir=dist --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=bcc74e86-b64a-46f7-961c-313573ba3799
+        run: npx netlify-cli deploy --dir=dist --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=${{ secrets.NETLIFY_SITE_ID }}
 
       - name: Deploy to Netlify (production)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: npx netlify-cli deploy --dir=dist --prod --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=bcc74e86-b64a-46f7-961c-313573ba3799
+        run: npx netlify-cli deploy --dir=dist --prod --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=${{ secrets.NETLIFY_SITE_ID }}

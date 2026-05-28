@@ -8,25 +8,35 @@ import { Rules } from '@/components/Rules'
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b shadow-sm">
-        <div className="mx-auto max-w-5xl px-4 py-4 flex items-center gap-3">
-          <div className="text-3xl">⚽</div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight leading-tight">World Cup Pool 2026</h1>
-            <p className="text-sm text-muted-foreground">Guardian Capital</p>
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b border-border">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center gap-3">
+          <span className="text-xl leading-none">⚽</span>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-base font-semibold tracking-tight text-foreground">World Cup Pool 2026</h1>
+            <span className="text-xs text-muted-foreground hidden sm:inline">Guardian Capital</span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6">
         <Tabs defaultValue="leaderboard">
-          <TabsList className="mb-6 w-full grid grid-cols-5 sm:inline-flex bg-transparent p-0 gap-1">
-            <TabsTrigger value="leaderboard" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">🏆 Standings</TabsTrigger>
-            <TabsTrigger value="matches" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">⚽ Matches</TabsTrigger>
-            <TabsTrigger value="entries" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">📋 Entries</TabsTrigger>
-            <TabsTrigger value="rules" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">📖 Rules</TabsTrigger>
-            <TabsTrigger value="admin" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">⚙️ Admin</TabsTrigger>
+          <TabsList className="mb-6 border-b border-border rounded-none bg-transparent p-0 w-full justify-start gap-0">
+            <TabsTrigger value="leaderboard" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
+              Standings
+            </TabsTrigger>
+            <TabsTrigger value="matches" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
+              Matches
+            </TabsTrigger>
+            <TabsTrigger value="entries" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
+              Entries
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
+              Rules
+            </TabsTrigger>
+            <TabsTrigger value="admin" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
+              Admin
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="leaderboard">

@@ -1,11 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Trophy, RefreshCw } from 'lucide-react'
+import { Trophy, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { calcAdvancementPoints, calcMatchPoints, ENTRY_FEE, PRIZE_SPLIT } from '@/types'
 import type { Team, TeamAdvancement, Match, Participant } from '@/types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { FlagImg } from '@/components/ui/flag-img'
 
 interface EntryTeamRow {
@@ -35,6 +33,9 @@ interface EntryResult {
   totalPoints: number
   totalGoals: number
 }
+
+const RANK_STYLES = ['text-amber-500', 'text-slate-400', 'text-amber-700']
+const RANK_BG = ['bg-amber-50 border-amber-200', 'bg-slate-50 border-slate-200', 'bg-orange-50 border-orange-200']
 
 export function Leaderboard() {
   const [results, setResults] = useState<EntryResult[]>([])
@@ -112,127 +113,136 @@ export function Leaderboard() {
     Math.floor(totalPrize * PRIZE_SPLIT.third),
   ]
 
-  const medal = (i: number) => ['🥇', '🥈', '🥉'][i] ?? `#${i + 1}`
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Prize Pool */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: '🥇 1st Place', value: `$${prizes[0]}`, sub: '60%' },
-          { label: '🥈 2nd Place', value: `$${prizes[1]}`, sub: '30%' },
-          { label: '🥉 3rd Place', value: `$${prizes[2]}`, sub: '10%' },
+          { label: '1st Place', emoji: '🥇', value: prizes[0], pct: '60%', style: 'border-amber-200 bg-gradient-to-b from-amber-50 to-white' },
+          { label: '2nd Place', emoji: '🥈', value: prizes[1], pct: '30%', style: 'border-slate-200 bg-gradient-to-b from-slate-50 to-white' },
+          { label: '3rd Place', emoji: '🥉', value: prizes[2], pct: '10%', style: 'border-orange-200 bg-gradient-to-b from-orange-50 to-white' },
         ].map((p) => (
-          <Card key={p.label} className="text-center">
-            <CardHeader className="pb-1 pt-4 px-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground">{p.label}</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-4 px-3">
-              <p className="text-xl font-bold">{p.value}</p>
-              <p className="text-xs text-muted-foreground">{p.sub} of ${totalPrize}</p>
-            </CardContent>
-          </Card>
+          <div key={p.label} className={`rounded-xl border p-4 text-center ${p.style}`}>
+            <p className="text-2xl mb-1">{p.emoji}</p>
+            <p className="text-xl font-bold text-foreground">${p.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{p.pct} of ${totalPrize}</p>
+            <p className="text-[11px] text-muted-foreground">{p.label}</p>
+          </div>
         ))}
       </div>
 
+      {/* Header row */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {results.length} {results.length === 1 ? 'entry' : 'entries'} · $20 each
+          {results.length} {results.length === 1 ? 'entry' : 'entries'}
+          {results.length > 0 && <span className="ml-1">· ${totalPrize} prize pool</span>}
         </p>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+        <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading} className="text-muted-foreground hover:text-foreground">
           <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
+      {/* Entry list */}
       {loading && results.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">Loading standings…</div>
+        <div className="text-center py-20 text-muted-foreground text-sm">Loading standings…</div>
       ) : results.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Trophy className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p>No entries yet — be the first!</p>
+        <div className="text-center py-20 text-muted-foreground">
+          <Trophy className="h-10 w-10 mx-auto mb-4 opacity-20" />
+          <p className="font-medium text-foreground">No entries yet</p>
+          <p className="text-sm mt-1">Head to Entries to be the first!</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="bg-card rounded-xl border border-border overflow-hidden divide-y divide-border">
           {results.map((item, i) => {
             const isExpanded = expanded === item.entry.id
             const hasPoints = item.totalPoints > 0
             const name = item.entry.participant?.name ?? '—'
-            const entryLabel = item.entry.entry_name ? ` · ${item.entry.entry_name}` : ''
+            const entryLabel = item.entry.entry_name
+
             return (
-              <Card
-                key={item.entry.id}
-                className={`transition-all ${i === 0 && hasPoints ? 'border-yellow-400 border-2' : ''}`}
-              >
+              <div key={item.entry.id} className={i < 3 && hasPoints ? RANK_BG[i] + ' border-l-2' : ''}>
                 <button
-                  className="w-full text-left"
+                  className="w-full text-left hover:bg-black/[0.02] transition-colors"
                   onClick={() => setExpanded(isExpanded ? null : item.entry.id)}
                 >
-                  <CardContent className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl w-8 text-center shrink-0">
-                        {hasPoints ? medal(i) : `#${i + 1}`}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">
-                          {name}
-                          <span className="font-normal text-muted-foreground text-sm">{entryLabel}</span>
-                        </p>
-                        <div className="flex flex-wrap gap-2 mt-1.5">
-                          {item.teamScores.map(({ team, total }) => (
-                            <span
-                              key={team.id}
-                              className="inline-flex items-center gap-1.5 bg-muted rounded-md px-2 py-1"
-                            >
-                              <FlagImg emoji={team.flag} size={22} />
-                              <span className="text-xs hidden sm:inline">{team.name}</span>
-                              {total > 0 && (
-                                <span className="text-xs text-green-600 font-bold">+{total}</span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-2xl font-bold">{item.totalPoints}</p>
-                        <p className="text-xs text-muted-foreground">pts</p>
-                        {item.totalGoals > 0 && (
-                          <p className="text-xs text-muted-foreground">{item.totalGoals} gls</p>
+                  <div className="px-4 py-3.5 flex items-center gap-3">
+                    {/* Rank */}
+                    <div className={`w-8 shrink-0 text-center font-bold text-sm ${i < 3 && hasPoints ? RANK_STYLES[i] : 'text-muted-foreground'}`}>
+                      {hasPoints ? (i < 3 ? ['1st', '2nd', '3rd'][i] : `${i + 1}th`) : `—`}
+                    </div>
+
+                    {/* Name + teams */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1.5">
+                        <span className="font-medium text-foreground truncate">{name}</span>
+                        {entryLabel && (
+                          <span className="text-xs text-muted-foreground truncate">{entryLabel}</span>
                         )}
                       </div>
+                      <div className="flex flex-wrap gap-1">
+                        {item.teamScores.map(({ team, total }) => (
+                          <span
+                            key={team.id}
+                            className="inline-flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-0.5"
+                          >
+                            <FlagImg emoji={team.flag} size={16} />
+                            <span className="text-[11px] text-muted-foreground hidden sm:inline">{team.name}</span>
+                            {total > 0 && (
+                              <span className="text-[11px] font-semibold text-emerald-600">+{total}</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </CardContent>
+
+                    {/* Points */}
+                    <div className="text-right shrink-0 flex items-center gap-2">
+                      <div>
+                        <p className="text-2xl font-bold text-foreground tabular-nums">{item.totalPoints}</p>
+                        <p className="text-[11px] text-muted-foreground text-right">pts</p>
+                      </div>
+                      {isExpanded
+                        ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      }
+                    </div>
+                  </div>
                 </button>
 
                 {isExpanded && (
-                  <CardContent className="pt-0 px-4 pb-4">
-                    <div className="border-t pt-3 mt-1 space-y-1">
+                  <div className="px-4 pb-4 pt-1 bg-background/50">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                       {item.teamScores.map(({ team, advPts, matchPts, total }) => (
-                        <div key={team.id} className="flex items-center gap-2 text-sm py-0.5">
-                          <span className="text-xs text-muted-foreground w-14 shrink-0">
-                            Tier {team.level}
-                          </span>
-                          <FlagImg emoji={team.flag} size={20} />
-                          <span className="flex-1">{team.name}</span>
-                          <div className="flex gap-3 text-xs text-muted-foreground">
+                        <div key={team.id} className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-card border border-border">
+                          <span className="text-[10px] text-muted-foreground w-10 shrink-0">Tier {team.level}</span>
+                          <FlagImg emoji={team.flag} size={18} />
+                          <span className="text-sm flex-1 min-w-0 truncate">{team.name}</span>
+                          <div className="flex items-center gap-1.5 text-[11px]">
                             {matchPts > 0 && (
-                              <span className="text-green-600">+{matchPts} match</span>
+                              <span className="text-emerald-600 font-medium">+{matchPts}</span>
                             )}
                             {advPts > 0 && (
-                              <span className="text-blue-600">+{advPts} adv</span>
+                              <span className="text-blue-600 font-medium">+{advPts}</span>
+                            )}
+                            {total === 0 && (
+                              <span className="text-muted-foreground">—</span>
                             )}
                           </div>
-                          <Badge
-                            variant={total > 0 ? 'success' : 'outline'}
-                            className="w-14 justify-center"
-                          >
-                            {total > 0 ? `+${total}` : total === 0 ? '0' : total}
-                          </Badge>
+                          <span className="text-sm font-semibold w-8 text-right tabular-nums">
+                            {total > 0 ? `${total}` : '0'}
+                          </span>
                         </div>
                       ))}
                     </div>
-                  </CardContent>
+                    <p className="text-[11px] text-muted-foreground mt-2 px-1">
+                      <span className="text-emerald-600 font-medium">green</span> = match pts ·{' '}
+                      <span className="text-blue-600 font-medium">blue</span> = advancement pts
+                      {item.totalGoals > 0 && ` · ${item.totalGoals} goals scored (tiebreaker)`}
+                    </p>
+                  </div>
                 )}
-              </Card>
+              </div>
             )
           })}
         </div>

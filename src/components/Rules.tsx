@@ -1,121 +1,133 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ENTRY_FEE, MAX_ENTRIES_PER_PERSON, TEAMS_PER_TIER } from '@/types'
 
 export function Rules() {
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            ⚽ Guardian Capital 2026 World Cup Pool — Rules
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5 text-sm">
+    <div className="max-w-2xl mx-auto space-y-2">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-border">
+          <h2 className="text-base font-semibold text-foreground">Guardian Capital 2026 World Cup Pool — Rules</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">THE GUARDIAN CAPITAL 2026 WORLD CUP POOL</p>
+        </div>
 
-          <div>
-            <h3 className="font-semibold text-base mb-1">1. Team Selection</h3>
-            <p className="text-muted-foreground">
-              The 48 teams are divided into <strong>6 tiers</strong> based on FIFA World Rankings.
-              Each entry must select <strong>{TEAMS_PER_TIER} teams from each tier</strong> for a
-              total of <strong>12 teams per entry</strong>. You may submit up
-              to <strong>{MAX_ENTRIES_PER_PERSON} entries</strong>.
+        <div className="divide-y divide-border">
+          {/* Team Selection */}
+          <Section number="1" title="Team Selection">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The 48 teams are divided into <strong className="text-foreground">6 tiers</strong> based on FIFA World Rankings.
+              Each entry must select <strong className="text-foreground">{TEAMS_PER_TIER} teams from each tier</strong> for a total of{' '}
+              <strong className="text-foreground">12 teams per entry</strong>. You may submit up to{' '}
+              <strong className="text-foreground">{MAX_ENTRIES_PER_PERSON} entries</strong>.
             </p>
-          </div>
+          </Section>
 
-          <div>
-            <h3 className="font-semibold text-base mb-2">2. Points System</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Match Results</p>
-                <div className="grid grid-cols-1 gap-1">
-                  <PointRow icon="✅" label="Team wins a game" value="+2 pts" positive />
-                  <PointRow icon="🤝" label="Team draws a game" value="+1 pt" positive />
-                </div>
-              </div>
-              <div>
-                <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Group Stage Bonuses</p>
-                <div className="grid grid-cols-1 gap-1">
-                  <PointRow icon="🔵" label="Team advances to Round of 32" value="+3 pts" positive />
-                  <PointRow icon="🥈" label="Team finishes 2nd in group" value="+4 pts" positive />
-                  <PointRow icon="🥇" label="Team finishes 1st in group" value="+6 pts" positive />
-                </div>
-              </div>
-              <div>
-                <p className="font-medium text-muted-foreground uppercase text-xs tracking-wide mb-1.5">Knockout Advancement Bonuses</p>
-                <div className="grid grid-cols-1 gap-1">
-                  <PointRow icon="🔵" label="Advances to Round of 16" value="+8 pts" positive />
-                  <PointRow icon="🟡" label="Advances to Quarter-Finals" value="+10 pts" positive />
-                  <PointRow icon="🟠" label="Advances to Semi-Finals" value="+12 pts" positive />
-                  <PointRow icon="🔴" label="Advances to the Final" value="+15 pts" positive />
-                  <PointRow icon="🏆" label="Wins the World Cup" value="+25 pts" positive />
-                </div>
-              </div>
+          {/* Points System */}
+          <Section number="2" title="Points System">
+            <div className="space-y-4">
+              <PointGroup label="Match Results">
+                <PointRow label="Team wins a game" value="+2 pts" />
+                <PointRow label="Team draws a game" value="+1 pt" />
+              </PointGroup>
+              <PointGroup label="Group Stage Bonuses">
+                <PointRow label="Advances to Round of 32" value="+3 pts" />
+                <PointRow label="Finishes 2nd in group" value="+4 pts" />
+                <PointRow label="Finishes 1st in group" value="+6 pts" />
+              </PointGroup>
+              <PointGroup label="Knockout Advancement">
+                <PointRow label="Advances to Round of 16" value="+8 pts" />
+                <PointRow label="Advances to Quarter-Finals" value="+10 pts" />
+                <PointRow label="Advances to Semi-Finals" value="+12 pts" />
+                <PointRow label="Advances to the Final" value="+15 pts" />
+                <PointRow label="Wins the World Cup" value="+25 pts" accent />
+              </PointGroup>
             </div>
-          </div>
+          </Section>
 
-          <div>
-            <h3 className="font-semibold text-base mb-1">3. Tiebreaker</h3>
-            <p className="text-muted-foreground">
-              If two or more entrants are tied on points, the entrant whose teams scored the most
-              total goals wins. If still tied, winnings are split equally among those tied.
+          {/* Tiebreaker */}
+          <Section number="3" title="Tiebreaker">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              If two or more entrants are tied on points, the entrant whose teams scored the most total goals wins.
+              If still tied, winnings are split equally among those tied.
             </p>
-          </div>
+          </Section>
 
-          <div>
-            <h3 className="font-semibold text-base mb-2">4. Prize Distribution</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <PrizeCard place="1st" emoji="🥇" pct="60%" />
-              <PrizeCard place="2nd" emoji="🥈" pct="30%" />
-              <PrizeCard place="3rd" emoji="🥉" pct="10%" />
+          {/* Prize Distribution */}
+          <Section number="4" title="Prize Distribution">
+            <div className="grid grid-cols-3 gap-2">
+              <PrizeCard place="1st" emoji="🥇" pct="60%" color="text-amber-600 bg-amber-50 border-amber-200" />
+              <PrizeCard place="2nd" emoji="🥈" pct="30%" color="text-slate-500 bg-slate-50 border-slate-200" />
+              <PrizeCard place="3rd" emoji="🥉" pct="10%" color="text-orange-600 bg-orange-50 border-orange-200" />
             </div>
-          </div>
+          </Section>
 
-          <div>
-            <h3 className="font-semibold text-base mb-1">5. Entry Fee & Deadline</h3>
-            <p className="text-muted-foreground">
+          {/* Entry Fee */}
+          <Section number="5" title="Entry Fee & Deadline">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               C${ENTRY_FEE}.00 per entry (cash only). Entry form and fee must be received by{' '}
-              <strong>Ben Lavallee</strong> (<a href="mailto:BLavallee@guardiancapital.com" className="underline">BLavallee@guardiancapital.com</a>){' '}
-              no later than <strong>5 p.m. on Monday, June 8, 2026</strong>.
+              <strong className="text-foreground">Ben Lavallee</strong>{' '}
+              (<a href="mailto:BLavallee@guardiancapital.com" className="text-blue-600 hover:underline">BLavallee@guardiancapital.com</a>){' '}
+              no later than <strong className="text-foreground">5 p.m. on Monday, June 8, 2026</strong>.
+              Ben reserves the right, in his sole discretion, to reject any entry.
             </p>
-          </div>
+          </Section>
 
-          <div>
-            <h3 className="font-semibold text-base mb-1">6. Rule Interpretations</h3>
-            <p className="text-muted-foreground">
-              Any rule interpretations not covered here will be dealt with by <strong>Edward Akkawi</strong>.
+          {/* Rule Interpretations */}
+          <Section number="6" title="Rule Interpretations">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Any rule interpretations not covered here will be dealt with by <strong className="text-foreground">Edward Akkawi</strong>.
               All decisions by Edward are final. Participation is open only to employees of Guardian Capital and its affiliates.
             </p>
-          </div>
+          </Section>
+        </div>
 
-          <p className="text-center text-lg font-bold pt-2">ENJOY THE FOOTIE!!!!!!!!! 🎉</p>
-        </CardContent>
-      </Card>
+        <div className="px-6 py-5 text-center border-t border-border">
+          <p className="font-bold text-foreground">ENJOY THE FOOTIE!!!!!!!!!!! ⚽</p>
+        </div>
+      </div>
     </div>
   )
 }
 
-function PointRow({
-  icon, label, value, positive,
-}: {
-  icon: string; label: string; value: string; positive?: boolean
-}) {
+function Section({ number, title, children }: { number: string; title: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 rounded-md bg-muted/50">
-      <span className="flex items-center gap-2">
-        <span>{icon}</span>
-        <span>{label}</span>
-      </span>
-      <span className={`font-bold text-sm ${positive ? 'text-green-600' : ''}`}>{value}</span>
+    <div className="px-6 py-5">
+      <div className="flex items-start gap-3">
+        <span className="text-xs font-bold text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">{number}</span>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-foreground mb-3">{title}</h3>
+          {children}
+        </div>
+      </div>
     </div>
   )
 }
 
-function PrizeCard({ place, emoji, pct }: { place: string; emoji: string; pct: string }) {
+function PointGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-muted/50 text-center">
-      <span className="text-2xl">{emoji}</span>
-      <span className="font-bold text-lg">{pct}</span>
-      <span className="text-xs text-muted-foreground">{place} place</span>
+    <div>
+      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</p>
+      <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function PointRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2 bg-card hover:bg-muted/30 transition-colors">
+      <span className="text-sm text-foreground">{label}</span>
+      <span className={`text-sm font-bold ${accent ? 'text-amber-600' : 'text-emerald-600'}`}>{value}</span>
+    </div>
+  )
+}
+
+function PrizeCard({ place, emoji, pct, color }: { place: string; emoji: string; pct: string; color: string }) {
+  return (
+    <div className={`rounded-lg border p-3 text-center ${color}`}>
+      <p className="text-xl mb-1">{emoji}</p>
+      <p className="font-bold text-lg">{pct}</p>
+      <p className="text-xs opacity-70">{place} place</p>
     </div>
   )
 }

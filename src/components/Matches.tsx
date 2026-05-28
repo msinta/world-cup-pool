@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabase'
 import { STAGE_LABELS } from '@/types'
 import type { Team, Stage } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { FlagImg } from '@/components/ui/flag-img'
 
 interface MatchRow {
@@ -48,28 +47,30 @@ function MatchCard({ match }: { match: MatchRow }) {
   const hasPens = match.home_penalty_goals > 0 || match.away_penalty_goals > 0
 
   return (
-    <div className="flex items-center gap-3 py-3 px-4 border-b last:border-0">
-      <div className="flex-1 flex items-center justify-end gap-2 text-right">
-        <span className="font-medium text-sm hidden sm:block">{match.home_team.name}</span>
-        <span className="font-medium text-sm sm:hidden">{match.home_team.name.split(' ').pop()}</span>
-        <FlagImg emoji={match.home_team.flag} size={24} />
+    <div className="flex items-center gap-2 py-3 px-4 border-b last:border-0 hover:bg-black/[0.01] transition-colors">
+      {/* Home team */}
+      <div className="flex-1 flex items-center justify-end gap-2">
+        <span className="text-sm font-medium text-foreground hidden sm:block text-right">{match.home_team.name}</span>
+        <span className="text-sm font-medium text-foreground sm:hidden text-right">{match.home_team.name.split(' ').slice(-1)[0]}</span>
+        <FlagImg emoji={match.home_team.flag} size={22} />
       </div>
 
-      <div className="text-center shrink-0 w-24">
+      {/* Score / time */}
+      <div className="text-center shrink-0 w-20">
         {match.is_completed ? (
           <div>
-            <p className="font-bold text-lg leading-none">
+            <p className="font-bold text-base tabular-nums leading-tight">
               {match.home_goals} – {match.away_goals}
             </p>
             {hasPens && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                ({match.home_penalty_goals}–{match.away_penalty_goals} pens)
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                pens {match.home_penalty_goals}–{match.away_penalty_goals}
               </p>
             )}
           </div>
         ) : (
           <div>
-            <p className="text-sm font-semibold text-muted-foreground">vs</p>
+            <p className="text-xs font-semibold text-muted-foreground">vs</p>
             {match.match_date && (
               <p className="text-xs text-muted-foreground">{formatTime(match.match_date)}</p>
             )}
@@ -77,15 +78,17 @@ function MatchCard({ match }: { match: MatchRow }) {
         )}
       </div>
 
+      {/* Away team */}
       <div className="flex-1 flex items-center gap-2">
-        <FlagImg emoji={match.away_team.flag} size={24} />
-        <span className="font-medium text-sm hidden sm:block">{match.away_team.name}</span>
-        <span className="font-medium text-sm sm:hidden">{match.away_team.name.split(' ').pop()}</span>
+        <FlagImg emoji={match.away_team.flag} size={22} />
+        <span className="text-sm font-medium text-foreground hidden sm:block">{match.away_team.name}</span>
+        <span className="text-sm font-medium text-foreground sm:hidden">{match.away_team.name.split(' ').slice(-1)[0]}</span>
       </div>
 
-      <Badge variant="outline" className="text-xs shrink-0 hidden sm:flex">
+      {/* Stage badge */}
+      <span className="text-[11px] text-muted-foreground shrink-0 hidden md:block w-20 text-right">
         {STAGE_LABELS[match.stage]}
-      </Badge>
+      </span>
     </div>
   )
 }
@@ -120,52 +123,59 @@ export function Matches() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
+        {/* Tab toggle */}
+        <div className="flex gap-0 border-b border-border">
           <button
             onClick={() => setTab('upcoming')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'upcoming' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === 'upcoming'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <Calendar className="h-3.5 w-3.5" />
             Upcoming
             {upcoming.length > 0 && (
-              <span className="bg-primary/10 text-primary text-xs rounded-full px-1.5">{upcoming.length}</span>
+              <span className="text-[11px] bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">{upcoming.length}</span>
             )}
           </button>
           <button
             onClick={() => setTab('completed')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'completed' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === 'completed'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <CheckCircle className="h-3.5 w-3.5" />
             Results
             {completed.length > 0 && (
-              <span className="bg-green-100 text-green-700 text-xs rounded-full px-1.5">{completed.length}</span>
+              <span className="text-[11px] bg-emerald-100 text-emerald-700 rounded-full px-1.5 py-0.5 leading-none">{completed.length}</span>
             )}
           </button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+
+        <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading} className="text-muted-foreground hover:text-foreground">
           <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
       {loading && upcoming.length === 0 && completed.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">Loading matches…</div>
+        <div className="text-center py-20 text-muted-foreground text-sm">Loading matches…</div>
       ) : tab === 'upcoming' ? (
         upcomingGroups.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <Calendar className="h-10 w-10 mx-auto mb-3 opacity-20" />
-            <p>No upcoming matches yet — check back after the first sync.</p>
+          <div className="text-center py-20 text-muted-foreground">
+            <Calendar className="h-10 w-10 mx-auto mb-4 opacity-20" />
+            <p className="font-medium text-foreground">No upcoming matches yet</p>
+            <p className="text-sm mt-1">Check back after the first sync.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {upcomingGroups.map(([date, matches]) => (
-              <div key={date} className="border rounded-xl overflow-hidden">
-                <div className="bg-muted/50 px-4 py-2 border-b">
-                  <p className="text-sm font-semibold">{date}</p>
+              <div key={date} className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-border bg-muted/30">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{date}</p>
                 </div>
                 {matches.map((m) => <MatchCard key={m.id} match={m} />)}
               </div>
@@ -174,16 +184,17 @@ export function Matches() {
         )
       ) : (
         completedGroups.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <CheckCircle className="h-10 w-10 mx-auto mb-3 opacity-20" />
-            <p>No results yet — tournament starts June 11.</p>
+          <div className="text-center py-20 text-muted-foreground">
+            <CheckCircle className="h-10 w-10 mx-auto mb-4 opacity-20" />
+            <p className="font-medium text-foreground">No results yet</p>
+            <p className="text-sm mt-1">Tournament starts June 11, 2026.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {completedGroups.map(([date, matches]) => (
-              <div key={date} className="border rounded-xl overflow-hidden">
-                <div className="bg-muted/50 px-4 py-2 border-b">
-                  <p className="text-sm font-semibold">{date}</p>
+              <div key={date} className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-border bg-muted/30">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{date}</p>
                 </div>
                 {matches.map((m) => <MatchCard key={m.id} match={m} />)}
               </div>

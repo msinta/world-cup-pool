@@ -6,7 +6,6 @@ import type { Team, Participant } from '@/types'
 import { EditEntry } from '@/components/EditEntry'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -189,7 +188,7 @@ export function Entries() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold">{entries.length} {entries.length === 1 ? 'Entry' : 'Entries'}</p>
+          <p className="font-semibold text-foreground">{entries.length} {entries.length === 1 ? 'Entry' : 'Entries'}</p>
           <p className="text-sm text-muted-foreground">
             2 teams per tier · 12 teams total · C${ENTRY_FEE} cash to Ben Lavallee
           </p>
@@ -280,64 +279,70 @@ export function Entries() {
       <EditEntry allTeams={teams} onDone={load} />
 
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground">Loading…</div>
+        <div className="text-center py-20 text-muted-foreground text-sm">Loading…</div>
       ) : entries.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p className="font-medium">No entries yet</p>
-          <p className="text-sm">Be the first to submit!</p>
+        <div className="text-center py-20 text-muted-foreground">
+          <Users className="h-10 w-10 mx-auto mb-4 opacity-20" />
+          <p className="font-medium text-foreground">No entries yet</p>
+          <p className="text-sm mt-1">Be the first to submit!</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="bg-card rounded-xl border border-border overflow-hidden divide-y divide-border">
           {Object.values(grouped).map(({ name, entries: pEntries }) => (
-            <Card key={name}>
-              <button className="w-full text-left" onClick={() => setExpanded(expanded === name ? null : name)}>
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold">{name}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'}
-                      </span>
-                      {expanded === name ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            <div key={name}>
+              <button className="w-full text-left hover:bg-black/[0.02] transition-colors" onClick={() => setExpanded(expanded === name ? null : name)}>
+                <div className="px-4 py-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-xs font-bold text-muted-foreground">{name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">{name}</p>
+                      <p className="text-xs text-muted-foreground">{pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'}</p>
                     </div>
                   </div>
-                </CardHeader>
+                  <div className="flex items-center gap-2">
+                    {expanded === name
+                      ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    }
+                  </div>
+                </div>
               </button>
 
               {expanded === name && (
-                <CardContent className="pt-0 px-4 pb-4 space-y-5">
+                <div className="px-4 pb-4 pt-1 bg-muted/20 border-t border-border space-y-4">
                   {pEntries.map((entry) => {
                     const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
                     return (
-                      <div key={entry.id}>
+                      <div key={entry.id} className="pt-3">
                         {entry.entry_name && (
-                          <p className="text-sm font-medium mb-2 text-muted-foreground">📋 {entry.entry_name}</p>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{entry.entry_name}</p>
                         )}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                           {TIERS.map((tier) => {
                             const tierTeams = sorted.filter((et) => et.team.level === tier)
                             return (
-                              <div key={tier} className="bg-muted/50 rounded-lg px-2.5 py-2">
-                                <p className="text-xs text-muted-foreground mb-1.5">Tier {tier}</p>
+                              <div key={tier} className="bg-card rounded-lg px-3 py-2 border border-border">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Tier {tier}</p>
                                 {tierTeams.map(({ team }) => (
-                                  <div key={team.id} className="flex items-center gap-1.5 mb-1">
-                                    <FlagImg emoji={team.flag} size={20} />
-                                    <span className="text-sm">{team.name}</span>
+                                  <div key={team.id} className="flex items-center gap-1.5 mb-1 last:mb-0">
+                                    <FlagImg emoji={team.flag} size={18} />
+                                    <span className="text-xs text-foreground">{team.name}</span>
                                   </div>
                                 ))}
                               </div>
                             )
                           })}
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <p className="text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between mt-2 px-0.5">
+                          <p className="text-[11px] text-muted-foreground">
                             Submitted {new Date(entry.created_at).toLocaleDateString()}
                           </p>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 text-xs text-muted-foreground"
+                            className="h-6 text-[11px] text-muted-foreground hover:text-foreground px-2"
                             onClick={() => void loadHistory(entry.id, `${name}${entry.entry_name ? ` · ${entry.entry_name}` : ''}`)}
                           >
                             <History className="h-3 w-3 mr-1" />
@@ -347,13 +352,13 @@ export function Entries() {
                       </div>
                     )
                   })}
-                </CardContent>
+                </div>
               )}
-            </Card>
+            </div>
           ))}
         </div>
       )}
-      <p className="text-xs text-center text-muted-foreground pb-4">
+      <p className="text-[11px] text-center text-muted-foreground pb-2">
         Max {MAX_ENTRIES_PER_PERSON} entries per person · {TEAMS_PER_TIER} teams per tier
       </p>
 

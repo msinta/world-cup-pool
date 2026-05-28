@@ -1,9 +1,7 @@
 import type { Stage } from '@/types'
+import { supabase } from '@/lib/supabase'
 
-const API_BASE = 'https://api.football-data.org/v4'
-const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY as string | undefined
-
-export const hasApiKey = !!API_KEY
+export const hasApiKey = true // key lives server-side in Supabase secret
 
 const STAGE_MAP: Partial<Record<string, Stage>> = {
   GROUP_STAGE: 'group',
@@ -58,13 +56,10 @@ export interface ApiMatch {
 }
 
 export async function fetchWorldCupMatches(): Promise<ApiMatch[]> {
-  if (!API_KEY) throw new Error('VITE_FOOTBALL_API_KEY is not configured')
-  const res = await fetch(`${API_BASE}/competitions/WC/matches?season=2026`, {
-    headers: { 'X-Auth-Token': API_KEY },
-  })
-  if (!res.ok) throw new Error(`football-data.org ${res.status}: ${res.statusText}`)
-  const data = (await res.json()) as { matches: ApiMatch[] }
-  return data.matches
+  const { data, error } = await supabase.functions.invoke('fetch-matches')
+  if (error) throw new Error(error.message)
+  if (data?.error) throw new Error(data.error)
+  return (data as { matches: ApiMatch[] }).matches
 }
 
 export function mapApiStage(apiStage: string): Stage | null {

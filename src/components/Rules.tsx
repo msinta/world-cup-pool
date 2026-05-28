@@ -12,7 +12,7 @@ export function Rules() {
 
         <div className="divide-y divide-border">
           {/* Team Selection */}
-          <Section number="1" title="Team Selection">
+          <Section number="⚽" title="Team Selection">
             <p className="text-sm text-muted-foreground leading-relaxed">
               The 48 teams are divided into <strong className="text-foreground">6 tiers</strong> based on FIFA World Rankings.
               Each entry must select <strong className="text-foreground">{TEAMS_PER_TIER} teams from each tier</strong> for a total of{' '}
@@ -22,29 +22,29 @@ export function Rules() {
           </Section>
 
           {/* Points System */}
-          <Section number="2" title="Points System">
+          <Section number="📊" title="Points System">
             <div className="space-y-4">
-              <PointGroup label="Match Results">
-                <PointRow label="Team wins a game" value="+2 pts" />
-                <PointRow label="Team draws a game" value="+1 pt" />
+              <PointGroup label="⚽  Match Results">
+                <PointRow emoji="✅" label="Team wins a game" value="+2 pts" />
+                <PointRow emoji="🤝" label="Team draws a game" value="+1 pt" />
               </PointGroup>
-              <PointGroup label="Group Stage Bonuses">
-                <PointRow label="Advances to Round of 32" value="+3 pts" />
-                <PointRow label="Finishes 2nd in group" value="+4 pts" />
-                <PointRow label="Finishes 1st in group" value="+6 pts" />
+              <PointGroup label="📋  Group Stage">
+                <PointRow emoji="➡️" label="Advances to Round of 32" value="+3 pts" />
+                <PointRow emoji="🥈" label="Finishes 2nd in group" value="+4 pts" />
+                <PointRow emoji="🥇" label="Finishes 1st in group" value="+6 pts" />
               </PointGroup>
-              <PointGroup label="Knockout Advancement">
-                <PointRow label="Advances to Round of 16" value="+8 pts" />
-                <PointRow label="Advances to Quarter-Finals" value="+10 pts" />
-                <PointRow label="Advances to Semi-Finals" value="+12 pts" />
-                <PointRow label="Advances to the Final" value="+15 pts" />
-                <PointRow label="Wins the World Cup" value="+25 pts" accent />
+              <PointGroup label="🏆  Knockout Rounds">
+                <PointRow emoji="⚡" label="Advances to Round of 16" value="+8 pts" />
+                <PointRow emoji="🔥" label="Advances to Quarter-Finals" value="+10 pts" />
+                <PointRow emoji="⭐" label="Advances to Semi-Finals" value="+12 pts" />
+                <PointRow emoji="🌟" label="Advances to the Final" value="+15 pts" />
+                <PointRow emoji="🏆" label="Wins the World Cup" value="+25 pts" accent />
               </PointGroup>
             </div>
           </Section>
 
           {/* Tiebreaker */}
-          <Section number="3" title="Tiebreaker">
+          <Section number="⚖️" title="Tiebreaker">
             <p className="text-sm text-muted-foreground leading-relaxed">
               If two or more entrants are tied on points, the entrant whose teams scored the most total goals wins.
               If still tied, winnings are split equally among those tied.
@@ -52,7 +52,7 @@ export function Rules() {
           </Section>
 
           {/* Prize Distribution */}
-          <Section number="4" title="Prize Distribution">
+          <Section number="💰" title="Prize Distribution">
             <div className="grid grid-cols-3 gap-2">
               <PrizeCard place="1st" emoji="🥇" pct="60%" color="text-amber-600 bg-amber-50 border-amber-200" />
               <PrizeCard place="2nd" emoji="🥈" pct="30%" color="text-slate-500 bg-slate-50 border-slate-200" />
@@ -61,7 +61,7 @@ export function Rules() {
           </Section>
 
           {/* Entry Fee */}
-          <Section number="5" title="Entry Fee & Deadline">
+          <Section number="💵" title="Entry Fee & Deadline">
             <p className="text-sm text-muted-foreground leading-relaxed">
               C${ENTRY_FEE}.00 per entry (cash only). Entry form and fee must be received by{' '}
               <strong className="text-foreground">Ben Lavallee</strong>{' '}
@@ -72,7 +72,7 @@ export function Rules() {
           </Section>
 
           {/* Rule Interpretations */}
-          <Section number="6" title="Rule Interpretations">
+          <Section number="📜" title="Rule Interpretations">
             <p className="text-sm text-muted-foreground leading-relaxed">
               Any rule interpretations not covered here will be dealt with by <strong className="text-foreground">Edward Akkawi</strong>.
               All decisions by Edward are final. Participation is open only to employees of Guardian Capital and its affiliates.
@@ -92,7 +92,7 @@ function Section({ number, title, children }: { number: string; title: string; c
   return (
     <div className="px-6 py-5">
       <div className="flex items-start gap-3">
-        <span className="text-xs font-bold text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">{number}</span>
+        <span className="text-base shrink-0 mt-0.5">{number}</span>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-foreground mb-3">{title}</h3>
           {children}
@@ -113,10 +113,13 @@ function PointGroup({ label, children }: { label: string; children: React.ReactN
   )
 }
 
-function PointRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function PointRow({ emoji, label, value, accent }: { emoji: string; label: string; value: string; accent?: boolean }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 bg-card hover:bg-muted/30 transition-colors">
-      <span className="text-sm text-foreground">{label}</span>
+      <span className="flex items-center gap-2 text-sm text-foreground">
+        <span>{emoji}</span>
+        {label}
+      </span>
       <span className={`text-sm font-bold ${accent ? 'text-amber-600' : 'text-emerald-600'}`}>{value}</span>
     </div>
   )

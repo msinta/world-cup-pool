@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Users, ChevronDown, ChevronUp, Info, History } from 'lucide-react'
+import { Plus, Users, Info, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, ENTRY_FEE } from '@/types'
 import type { Team, Participant } from '@/types'
@@ -49,7 +49,6 @@ export function Entries() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [expanded, setExpanded] = useState<string | null>(null)
 
   const [participantName, setParticipantName] = useState('')
   const [accessCode, setAccessCode] = useState('')
@@ -287,73 +286,63 @@ export function Entries() {
           <p className="text-sm mt-1">Be the first to submit!</p>
         </div>
       ) : (
-        <div className="bg-card rounded-xl border border-border overflow-hidden divide-y divide-border">
+        <div className="space-y-3">
           {Object.values(grouped).map(({ name, entries: pEntries }) => (
-            <div key={name}>
-              <button className="w-full text-left hover:bg-black/[0.02] transition-colors" onClick={() => setExpanded(expanded === name ? null : name)}>
-                <div className="px-4 py-3.5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-xs font-bold text-muted-foreground">{name.charAt(0).toUpperCase()}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground text-sm">{name}</p>
-                      <p className="text-xs text-muted-foreground">{pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {expanded === name
-                      ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    }
-                  </div>
+            <div key={name} className="bg-card rounded-xl border border-border overflow-hidden">
+              {/* Participant header */}
+              <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-muted-foreground">{name.charAt(0).toUpperCase()}</span>
                 </div>
-              </button>
+                <div>
+                  <p className="font-medium text-foreground text-sm">{name}</p>
+                  <p className="text-xs text-muted-foreground">{pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'}</p>
+                </div>
+              </div>
 
-              {expanded === name && (
-                <div className="px-4 pb-4 pt-1 bg-muted/20 border-t border-border space-y-4">
-                  {pEntries.map((entry) => {
-                    const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
-                    return (
-                      <div key={entry.id} className="pt-3">
-                        {entry.entry_name && (
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{entry.entry_name}</p>
-                        )}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {TIERS.map((tier) => {
-                            const tierTeams = sorted.filter((et) => et.team.level === tier)
-                            return (
-                              <div key={tier} className="bg-card rounded-lg px-3 py-2 border border-border">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Tier {tier}</p>
-                                {tierTeams.map(({ team }) => (
-                                  <div key={team.id} className="flex items-center gap-1.5 mb-1 last:mb-0">
-                                    <FlagImg emoji={team.flag} size={18} />
-                                    <span className="text-xs text-foreground">{team.name}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )
-                          })}
-                        </div>
-                        <div className="flex items-center justify-between mt-2 px-0.5">
-                          <p className="text-[11px] text-muted-foreground">
-                            Submitted {new Date(entry.created_at).toLocaleDateString()}
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-[11px] text-muted-foreground hover:text-foreground px-2"
-                            onClick={() => void loadHistory(entry.id, `${name}${entry.entry_name ? ` · ${entry.entry_name}` : ''}`)}
-                          >
-                            <History className="h-3 w-3 mr-1" />
-                            History
-                          </Button>
-                        </div>
+              {/* All entries always visible */}
+              <div className="px-4 pb-4 pt-3 space-y-5">
+                {pEntries.map((entry) => {
+                  const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
+                  return (
+                    <div key={entry.id}>
+                      {entry.entry_name && (
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{entry.entry_name}</p>
+                      )}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {TIERS.map((tier) => {
+                          const tierTeams = sorted.filter((et) => et.team.level === tier)
+                          return (
+                            <div key={tier} className="bg-muted/40 rounded-lg px-3 py-2 border border-border">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Tier {tier}</p>
+                              {tierTeams.map(({ team }) => (
+                                <div key={team.id} className="flex items-center gap-1.5 mb-1 last:mb-0">
+                                  <FlagImg emoji={team.flag} size={18} />
+                                  <span className="text-xs text-foreground">{team.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                      <div className="flex items-center justify-between mt-2 px-0.5">
+                        <p className="text-[11px] text-muted-foreground">
+                          Submitted {new Date(entry.created_at).toLocaleDateString()}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[11px] text-muted-foreground hover:text-foreground px-2"
+                          onClick={() => void loadHistory(entry.id, `${name}${entry.entry_name ? ` · ${entry.entry_name}` : ''}`)}
+                        >
+                          <History className="h-3 w-3 mr-1" />
+                          History
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           ))}
         </div>

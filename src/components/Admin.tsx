@@ -380,8 +380,8 @@ function ApiSyncPanel() {
         const stage = mapApiStage(m.stage)
         if (!stage) continue
 
-        const homeId = resolveTeamId(m.homeTeam.name, m.homeTeam.shortName, nameMap)
-        const awayId = resolveTeamId(m.awayTeam.name, m.awayTeam.shortName, nameMap)
+        const homeId = resolveTeamId(m.homeTeam?.name, m.homeTeam?.shortName, nameMap)
+        const awayId = resolveTeamId(m.awayTeam?.name, m.awayTeam?.shortName, nameMap)
         if (!homeId || !awayId) continue
 
         const isFinished = m.status === 'FINISHED'
@@ -392,10 +392,10 @@ function ApiSyncPanel() {
           stage,
           match_date: m.utcDate,
           is_completed: isFinished,
-          home_goals: m.score.fullTime?.home ?? null,
-          away_goals: m.score.fullTime?.away ?? null,
-          home_penalty_goals: m.score.penalties?.home ?? 0,
-          away_penalty_goals: m.score.penalties?.away ?? 0,
+          home_goals: m.score?.fullTime?.home ?? null,
+          away_goals: m.score?.fullTime?.away ?? null,
+          home_penalty_goals: m.score?.penalties?.home ?? 0,
+          away_penalty_goals: m.score?.penalties?.away ?? 0,
         }
 
         const { error } = await supabase.from('matches').upsert(rec, { onConflict: 'external_id' })
@@ -409,8 +409,8 @@ function ApiSyncPanel() {
         }
 
         if (stage === 'final' && isFinished) {
-          if (m.score.winner === 'HOME_TEAM') finalWinners.push(homeId)
-          else if (m.score.winner === 'AWAY_TEAM') finalWinners.push(awayId)
+          if (m.score?.winner === 'HOME_TEAM') finalWinners.push(homeId)
+          else if (m.score?.winner === 'AWAY_TEAM') finalWinners.push(awayId)
         }
       }
 

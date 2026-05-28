@@ -12,8 +12,8 @@ const STAGE_MAP: Partial<Record<string, Stage>> = {
   FINAL: 'final',
 }
 
-// Normalize team name for fuzzy matching
-function norm(s: string): string {
+function norm(s: string | null | undefined): string {
+  if (!s) return ''
   return s
     .toLowerCase()
     .normalize('NFD')
@@ -22,7 +22,6 @@ function norm(s: string): string {
     .trim()
 }
 
-// Known name differences between football-data.org and our DB
 const ALIASES: Record<string, string> = {
   'united states': 'usa',
   'republic of ireland': 'ireland',
@@ -37,8 +36,8 @@ const ALIASES: Record<string, string> = {
 
 export interface ApiTeam {
   id: number
-  name: string
-  shortName: string
+  name: string | null
+  shortName: string | null
 }
 
 export interface ApiMatch {
@@ -46,13 +45,13 @@ export interface ApiMatch {
   utcDate: string
   stage: string
   status: 'SCHEDULED' | 'TIMED' | 'IN_PLAY' | 'PAUSED' | 'FINISHED' | 'POSTPONED' | 'CANCELLED' | 'SUSPENDED'
-  homeTeam: ApiTeam
-  awayTeam: ApiTeam
+  homeTeam: ApiTeam | null
+  awayTeam: ApiTeam | null
   score: {
     winner: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null
-    fullTime: { home: number | null; away: number | null }
-    penalties: { home: number | null; away: number | null }
-  }
+    fullTime: { home: number | null; away: number | null } | null
+    penalties: { home: number | null; away: number | null } | null
+  } | null
 }
 
 export async function fetchWorldCupMatches(): Promise<ApiMatch[]> {
@@ -66,9 +65,10 @@ export function mapApiStage(apiStage: string): Stage | null {
   return STAGE_MAP[apiStage] ?? null
 }
 
-export function resolveTeamId(apiName: string, shortName: string, nameToId: Map<string, string>): string | null {
+export function resolveTeamId(apiName: string | null | undefined, shortName: string | null | undefined, nameToId: Map<string, string>): string | null {
   for (const candidate of [apiName, shortName]) {
     const n = norm(candidate)
+    if (!n) continue
     const alias = ALIASES[n] ?? n
     const id = nameToId.get(alias) ?? nameToId.get(n)
     if (id) return id
@@ -79,7 +79,8 @@ export function resolveTeamId(apiName: string, shortName: string, nameToId: Map<
 export function buildNameMap(teams: { id: string; name: string }[]): Map<string, string> {
   const map = new Map<string, string>()
   for (const t of teams) {
-    map.set(norm(t.name), t.id)
+    const n = norm(t.name)
+    if (n) map.set(n, t.id)
   }
   return map
 }

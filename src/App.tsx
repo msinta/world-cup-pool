@@ -10,12 +10,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center gap-3">
-          <span className="text-xl leading-none">⚽</span>
-          <div className="flex items-baseline gap-2">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xl leading-none">⚽</span>
             <h1 className="text-base font-semibold tracking-tight text-foreground">World Cup Pool 2026</h1>
-            <span className="text-xs text-muted-foreground hidden sm:inline">Guardian Capital</span>
           </div>
+          <img src="/guardian-capital-logo.png" alt="Guardian Capital" className="h-6 object-contain" />
         </div>
       </header>
 

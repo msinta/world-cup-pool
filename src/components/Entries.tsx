@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Users, Info, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, ENTRY_FEE } from '@/types'
+import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON } from '@/types'
 import type { Team, Participant } from '@/types'
 import { EditEntry } from '@/components/EditEntry'
 import { toast } from '@/hooks/use-toast'
@@ -43,12 +43,16 @@ const TIERS = [1, 2, 3, 4, 5, 6]
 type Picks = Record<number, [string, string]>
 const EMPTY_PICKS: Picks = { 1: ['', ''], 2: ['', ''], 3: ['', ''], 4: ['', ''], 5: ['', ''], 6: ['', ''] }
 
+// First game: Mexico vs South Africa, June 11 2026 at 3 PM EDT (19:00 UTC)
+const TOURNAMENT_START = new Date('2026-06-11T19:00:00Z')
+
 export function Entries() {
   const [entries, setEntries] = useState<EntryRow[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const picksHidden = Date.now() < TOURNAMENT_START.getTime()
 
   const [participantName, setParticipantName] = useState('')
   const [accessCode, setAccessCode] = useState('')
@@ -189,7 +193,7 @@ export function Entries() {
         <div>
           <p className="font-semibold text-foreground">{entries.length} {entries.length === 1 ? 'Entry' : 'Entries'}</p>
           <p className="text-sm text-muted-foreground">
-            2 teams per tier · 12 teams total · C${ENTRY_FEE} cash to Ben Lavallee
+            2 teams per tier · 12 teams total
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
@@ -203,7 +207,7 @@ export function Entries() {
             <DialogHeader>
               <DialogTitle>Submit Your Entry</DialogTitle>
               <DialogDescription>
-                Pick <strong>2 teams from each tier</strong> (12 total). Entry fee: C${ENTRY_FEE} cash to Ben Lavallee. Deadline: <strong>June 8 at 5 p.m. ET</strong>.
+                Pick <strong>2 teams from each tier</strong> (12 total).
               </DialogDescription>
             </DialogHeader>
 
@@ -268,7 +272,7 @@ export function Entries() {
 
             <DialogFooter className="pt-2">
               <Button onClick={() => void handleSubmit()} disabled={submitting} className="w-full">
-                {submitting ? 'Submitting…' : `Submit Entry (C$${ENTRY_FEE} cash to Ben Lavallee)`}
+                {submitting ? 'Submitting…' : 'Submit Entry'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -302,7 +306,11 @@ export function Entries() {
 
               {/* All entries always visible */}
               <div className="px-4 pb-4 pt-3 space-y-5">
-                {pEntries.map((entry) => {
+                {picksHidden ? (
+                  <p className="text-xs text-muted-foreground py-1">
+                    {pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'} submitted — picks revealed when the tournament starts (June 11 at 3 PM EDT).
+                  </p>
+                ) : pEntries.map((entry) => {
                   const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
                   return (
                     <div key={entry.id}>

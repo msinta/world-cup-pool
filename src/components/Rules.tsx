@@ -63,11 +63,10 @@ export function Rules() {
           {/* Entry Fee */}
           <Section number="💵" title="Entry Fee & Deadline">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              C${ENTRY_FEE}.00 per entry (cash only). Entry form and fee must be received by{' '}
+              C${ENTRY_FEE}.00 per entry (via etransfer), to be received by{' '}
               <strong className="text-foreground">Ben Lavallee</strong>{' '}
-              (<a href="mailto:BLavallee@guardiancapital.com" className="text-blue-600 hover:underline">BLavallee@guardiancapital.com</a>){' '}
-              no later than <strong className="text-foreground">5 p.m. on Monday, June 8, 2026</strong>.
-              Ben reserves the right, in his sole discretion, to reject any entry.
+              (<a href="mailto:blavallee@guardiancapital.com" className="text-blue-600 hover:underline">blavallee@guardiancapital.com</a>){' '}
+              no later than <strong className="text-foreground">15:00 EST on Thursday, June 11, 2026</strong>.
             </p>
           </Section>
 

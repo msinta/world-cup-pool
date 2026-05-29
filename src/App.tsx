@@ -23,7 +23,7 @@ export default function App() {
         <Tabs defaultValue="leaderboard">
           <TabsList className="mb-6 border-b border-border rounded-none bg-transparent p-0 w-full justify-start gap-0">
             <TabsTrigger value="leaderboard" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
-              Standings
+              Leaderboard
             </TabsTrigger>
             <TabsTrigger value="matches" className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground transition-colors">
               Matches

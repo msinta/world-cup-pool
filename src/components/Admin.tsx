@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Shield, Trash2, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { LEVEL_LABELS, STAGE_LABELS, picksHidden } from '@/types'
+import { STAGE_LABELS, picksHidden } from '@/types'
 import type { Team, Stage, Participant } from '@/types'
 import { fetchWorldCupMatches, mapApiStage, resolveTeamId, buildNameMap } from '@/lib/football-api'
 import { toast } from '@/hooks/use-toast'
@@ -11,19 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { FlagImg } from '@/components/ui/flag-img'
 
 interface EntryTeamRow {
@@ -103,96 +90,22 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
 
 // --- Entries Tab ---
 const TIERS = [1, 2, 3, 4, 5, 6]
-type Picks = Record<number, [string, string]>
-const EMPTY_PICKS: Picks = { 1: ['', ''], 2: ['', ''], 3: ['', ''], 4: ['', ''], 5: ['', ''], 6: ['', ''] }
 
 function EntriesPanel() {
   const [entries, setEntries] = useState<EntryRow[]>([])
-  const [allTeams, setAllTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingEntry, setEditingEntry] = useState<EntryRow | null>(null)
-  const [editPicks, setEditPicks] = useState<Picks>(EMPTY_PICKS)
-  const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [{ data, error }, { data: t }] = await Promise.all([
-      supabase
-        .from('entries')
-        .select(
-          'id, entry_name, created_at, participant:participants(id, name, access_code, created_at), entry_teams(id, team:teams(id, name, flag, level, created_at))',
-        )
-        .order('created_at'),
-      supabase.from('teams').select('*').order('level').order('name'),
-    ])
+    const { data, error } = await supabase
+      .from('entries')
+      .select('id, entry_name, created_at, participant:participants(id, name, access_code, created_at), entry_teams(id, team:teams(id, name, flag, level, created_at))')
+      .order('created_at')
     if (!error) setEntries((data ?? []) as unknown as EntryRow[])
-    setAllTeams(t ?? [])
     setLoading(false)
   }, [])
 
   useEffect(() => { void load() }, [load])
-
-  const openEdit = (entry: EntryRow) => {
-    const picks: Picks = { 1: ['', ''], 2: ['', ''], 3: ['', ''], 4: ['', ''], 5: ['', ''], 6: ['', ''] }
-    const byTier: Record<number, string[]> = {}
-    for (const et of entry.entry_teams) {
-      if (!byTier[et.team.level]) byTier[et.team.level] = []
-      byTier[et.team.level].push(et.team.id)
-    }
-    for (const tier of TIERS) {
-      picks[tier] = [byTier[tier]?.[0] ?? '', byTier[tier]?.[1] ?? ''] as [string, string]
-    }
-    setEditPicks(picks)
-    setEditingEntry(entry)
-  }
-
-  const setEditPick = (tier: number, slot: 0 | 1, value: string) => {
-    setEditPicks((prev) => {
-      const pair: [string, string] = [...prev[tier]] as [string, string]
-      pair[slot] = value
-      return { ...prev, [tier]: pair }
-    })
-  }
-
-  const saveEdit = async () => {
-    if (!editingEntry) return
-    for (const tier of TIERS) {
-      const [a, b] = editPicks[tier]
-      if (!a || !b) { toast({ title: `Select 2 teams for Tier ${tier}`, variant: 'destructive' }); return }
-      if (a === b) { toast({ title: `Pick 2 different teams in Tier ${tier}`, variant: 'destructive' }); return }
-    }
-    setSaving(true)
-    try {
-      const previousTeams = editingEntry.entry_teams.map(et => ({
-        team_id: et.team.id, team_name: et.team.name, flag: et.team.flag, level: et.team.level,
-      }))
-      const newTeams = TIERS.flatMap(tier =>
-        editPicks[tier].map(teamId => {
-          const team = allTeams.find(t => t.id === teamId)!
-          return { team_id: teamId, team_name: team.name, flag: team.flag, level: team.level }
-        })
-      )
-      const { error: de } = await supabase.from('entry_teams').delete().eq('entry_id', editingEntry.id)
-      if (de) throw de
-      const { error: ie } = await supabase.from('entry_teams').insert(
-        TIERS.flatMap(tier => editPicks[tier].map(teamId => ({ entry_id: editingEntry.id, team_id: teamId })))
-      )
-      if (ie) throw ie
-      await supabase.from('entry_changes').insert({
-        entry_id: editingEntry.id,
-        changed_by: 'admin',
-        previous_teams: previousTeams,
-        new_teams: newTeams,
-      })
-      toast({ title: 'Entry updated', variant: 'success' })
-      setEditingEntry(null)
-      void load()
-    } catch (err) {
-      toast({ title: 'Error saving', description: err instanceof Error ? err.message : 'Unknown', variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const deleteEntry = async (entryId: string) => {
     if (!confirm('Delete this entry? This cannot be undone.')) return
@@ -207,112 +120,52 @@ function EntriesPanel() {
   if (loading) return <div className="text-center py-12 text-muted-foreground">Loading…</div>
 
   return (
-    <>
-      <div className="space-y-3">
-        {entries.length === 0 && (
-          <p className="text-center py-12 text-muted-foreground">No entries yet.</p>
-        )}
-        {entries.map((entry) => {
-          const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
-          return (
-            <div key={entry.id} className="p-3 rounded-lg border bg-card space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium">{entry.participant?.name ?? '—'}</p>
-                  {entry.entry_name && (
-                    <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
-                  )}
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button variant="outline" size="sm" onClick={() => openEdit(entry)}>
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => void deleteEntry(entry.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+    <div className="space-y-3">
+      {entries.length === 0 && (
+        <p className="text-center py-12 text-muted-foreground">No entries yet.</p>
+      )}
+      {entries.map((entry) => {
+        const sorted = [...entry.entry_teams].sort((a, b) => a.team.level - b.team.level)
+        return (
+          <div key={entry.id} className="p-3 rounded-lg border bg-card space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium">{entry.participant?.name ?? '—'}</p>
+                {entry.entry_name && <p className="text-sm text-muted-foreground">{entry.entry_name}</p>}
               </div>
-              {picksHidden() ? (
-                <p className="text-xs text-muted-foreground pt-1">Picks hidden until June 11 at 3 PM EDT.</p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {TIERS.map((tier) => {
-                    const tierTeams = sorted.filter((et) => et.team.level === tier)
-                    return (
-                      <div key={tier} className="bg-muted/50 rounded-md px-2 py-1.5">
-                        <p className="text-xs text-muted-foreground mb-1">Tier {tier}</p>
-                        {tierTeams.map(({ team }) => (
-                          <div key={team.id} className="flex items-center gap-1.5 mb-0.5">
-                            <FlagImg emoji={team.flag} size={16} />
-                            <p className="text-xs">{team.name}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                onClick={() => void deleteEntry(entry.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-          )
-        })}
-      </div>
-
-      <Dialog open={!!editingEntry} onOpenChange={(o) => { if (!o) setEditingEntry(null) }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Edit — {editingEntry?.participant?.name}
-              {editingEntry?.entry_name ? ` · ${editingEntry.entry_name}` : ''}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-1">
-            {TIERS.map((tier) => (
-              <div key={tier} className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {LEVEL_LABELS[tier]}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {([0, 1] as const).map((slot) => (
-                    <Select key={slot} value={editPicks[tier][slot]} onValueChange={(v) => setEditPick(tier, slot, v)}>
-                      <SelectTrigger className="text-sm">
-                        <SelectValue placeholder={`Team ${slot + 1}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allTeams.filter((t) => t.level === tier).map((team) => (
-                          <SelectItem
-                            key={team.id}
-                            value={team.id}
-                            disabled={editPicks[tier][slot === 0 ? 1 : 0] === team.id}
-                          >
-                            <span className="flex items-center gap-2">
-                              <FlagImg emoji={team.flag} size={16} />
-                              {team.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ))}
-                </div>
+            {picksHidden() ? (
+              <p className="text-xs text-muted-foreground pt-1">Picks hidden until June 11 at 3 PM EDT.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {TIERS.map((tier) => {
+                  const tierTeams = sorted.filter((et) => et.team.level === tier)
+                  return (
+                    <div key={tier} className="bg-muted/50 rounded-md px-2 py-1.5">
+                      <p className="text-xs text-muted-foreground mb-1">Tier {tier}</p>
+                      {tierTeams.map(({ team }) => (
+                        <div key={team.id} className="flex items-center gap-1.5 mb-0.5">
+                          <FlagImg emoji={team.flag} size={16} />
+                          <p className="text-xs">{team.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
               </div>
-            ))}
+            )}
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => setEditingEntry(null)}>
-              Cancel
-            </Button>
-            <Button className="flex-1" onClick={() => void saveEdit()} disabled={saving}>
-              {saving ? 'Saving…' : 'Save Changes'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        )
+      })}
+    </div>
   )
 }
 

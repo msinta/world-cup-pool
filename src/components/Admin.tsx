@@ -386,6 +386,25 @@ function ApiSyncPanel() {
 
         const homeId = resolveTeamId(m.homeTeam?.name, m.homeTeam?.shortName, nameMap)
         const awayId = resolveTeamId(m.awayTeam?.name, m.awayTeam?.shortName, nameMap)
+
+        // Store TBD knockout matches (known date, unknown teams) so they show in upcoming/bracket
+        if (!homeId && !awayId && stage !== 'group') {
+          await supabase.from('matches').upsert({
+            external_id: String(m.id),
+            home_team_id: null,
+            away_team_id: null,
+            stage,
+            match_date: m.utcDate,
+            is_completed: false,
+            home_goals: null,
+            away_goals: null,
+            home_penalty_goals: 0,
+            away_penalty_goals: 0,
+          }, { onConflict: 'external_id' })
+          synced++
+          continue
+        }
+
         if (!homeId || !awayId) continue
 
         const isFinished = m.status === 'FINISHED'

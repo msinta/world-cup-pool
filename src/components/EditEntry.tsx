@@ -25,8 +25,8 @@ import {
 } from '@/components/ui/select'
 import { FlagImg } from '@/components/ui/flag-img'
 
-// Entries lock at the June 8 deadline (5 p.m. ET = 21:00 UTC)
-const LOCK_DATE = new Date('2026-06-08T21:00:00Z')
+// Entries lock at tournament start: June 11 3 PM EDT = 19:00 UTC
+const LOCK_DATE = new Date('2026-06-11T19:00:00Z')
 const isLocked = () => new Date() >= LOCK_DATE
 
 const TIERS = [1, 2, 3, 4, 5, 6]
@@ -229,7 +229,7 @@ export function EditEntry({ allTeams, onDone }: { allTeams: Team[]; onDone: () =
               <div>
                 <p className="font-medium">Want to change your picks?</p>
                 <p className="text-sm text-muted-foreground">
-                  Entries can be edited until <strong>June 8, 2026 at 5 p.m. ET</strong>. You'll need your name and access code.
+                  Entries can be edited until <strong>June 11, 2026 at 3 p.m. EDT</strong>. You'll need your name and access code.
                 </p>
               </div>
             </div>
@@ -329,7 +329,7 @@ export function EditEntry({ allTeams, onDone }: { allTeams: Team[]; onDone: () =
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit — {editingEntry?.entry_name || 'Entry'}</DialogTitle>
-            <DialogDescription>Pick {TEAMS_PER_TIER} teams from each tier. Locked June 8 at 5 p.m. ET.</DialogDescription>
+            <DialogDescription>Pick {TEAMS_PER_TIER} teams from each tier. Locked June 11 at 3 p.m. EDT.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-1">
             {TIERS.map(tier => (

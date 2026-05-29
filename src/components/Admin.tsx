@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Shield, Trash2, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { LEVEL_LABELS, STAGE_LABELS } from '@/types'
+import { LEVEL_LABELS, STAGE_LABELS, picksHidden } from '@/types'
 import type { Team, Stage, Participant } from '@/types'
 import { fetchWorldCupMatches, mapApiStage, resolveTeamId, buildNameMap } from '@/lib/football-api'
 import { toast } from '@/hooks/use-toast'
@@ -237,22 +237,26 @@ function EntriesPanel() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {TIERS.map((tier) => {
-                  const tierTeams = sorted.filter((et) => et.team.level === tier)
-                  return (
-                    <div key={tier} className="bg-muted/50 rounded-md px-2 py-1.5">
-                      <p className="text-xs text-muted-foreground mb-1">Tier {tier}</p>
-                      {tierTeams.map(({ team }) => (
-                        <div key={team.id} className="flex items-center gap-1.5 mb-0.5">
-                          <FlagImg emoji={team.flag} size={16} />
-                          <p className="text-xs">{team.name}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
+              {picksHidden() ? (
+                <p className="text-xs text-muted-foreground pt-1">Picks hidden until June 11 at 3 PM EDT.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {TIERS.map((tier) => {
+                    const tierTeams = sorted.filter((et) => et.team.level === tier)
+                    return (
+                      <div key={tier} className="bg-muted/50 rounded-md px-2 py-1.5">
+                        <p className="text-xs text-muted-foreground mb-1">Tier {tier}</p>
+                        {tierTeams.map(({ team }) => (
+                          <div key={team.id} className="flex items-center gap-1.5 mb-0.5">
+                            <FlagImg emoji={team.flag} size={16} />
+                            <p className="text-xs">{team.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )
         })}

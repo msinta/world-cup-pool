@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Users, Info, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON } from '@/types'
+import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, picksHidden } from '@/types'
 import type { Team, Participant } from '@/types'
 import { EditEntry } from '@/components/EditEntry'
 import { toast } from '@/hooks/use-toast'
@@ -43,16 +43,13 @@ const TIERS = [1, 2, 3, 4, 5, 6]
 type Picks = Record<number, [string, string]>
 const EMPTY_PICKS: Picks = { 1: ['', ''], 2: ['', ''], 3: ['', ''], 4: ['', ''], 5: ['', ''], 6: ['', ''] }
 
-// First game: Mexico vs South Africa, June 11 2026 at 3 PM EDT (19:00 UTC)
-const TOURNAMENT_START = new Date('2026-06-11T19:00:00Z')
-
 export function Entries() {
   const [entries, setEntries] = useState<EntryRow[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const picksHidden = Date.now() < TOURNAMENT_START.getTime()
+  const hidden = picksHidden()
 
   const [participantName, setParticipantName] = useState('')
   const [accessCode, setAccessCode] = useState('')
@@ -306,7 +303,7 @@ export function Entries() {
 
               {/* All entries always visible */}
               <div className="px-4 pb-4 pt-3 space-y-5">
-                {picksHidden ? (
+                {hidden ? (
                   <p className="text-xs text-muted-foreground py-1">
                     {pEntries.length} {pEntries.length === 1 ? 'entry' : 'entries'} submitted — picks revealed when the tournament starts (June 11 at 3 PM EDT).
                   </p>

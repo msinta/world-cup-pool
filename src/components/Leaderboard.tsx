@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Trophy, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { calcAdvancementPoints, calcMatchPoints, ENTRY_FEE, PRIZE_SPLIT } from '@/types'
+import { calcAdvancementPoints, calcMatchPoints, ENTRY_FEE, PRIZE_SPLIT, picksHidden } from '@/types'
 import type { Team, TeamAdvancement, Match, Participant } from '@/types'
 import { Button } from '@/components/ui/button'
 import { FlagImg } from '@/components/ui/flag-img'
@@ -163,8 +163,8 @@ export function Leaderboard() {
             return (
               <div key={item.entry.id} className={i < 3 && hasPoints ? RANK_BG[i] + ' border-l-2' : ''}>
                 <button
-                  className="w-full text-left hover:bg-black/[0.02] transition-colors"
-                  onClick={() => setExpanded(isExpanded ? null : item.entry.id)}
+                  className={`w-full text-left transition-colors ${picksHidden() ? 'cursor-default' : 'hover:bg-black/[0.02]'}`}
+                  onClick={() => !picksHidden() && setExpanded(isExpanded ? null : item.entry.id)}
                 >
                   <div className="px-4 py-3.5 flex items-center gap-3">
                     {/* Rank */}
@@ -174,26 +174,28 @@ export function Leaderboard() {
 
                     {/* Name + teams */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 mb-1.5">
+                      <div className="flex items-baseline gap-2">
                         <span className="font-medium text-foreground truncate">{name}</span>
                         {entryLabel && (
                           <span className="text-xs text-muted-foreground truncate">{entryLabel}</span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {item.teamScores.map(({ team, total }) => (
-                          <span
-                            key={team.id}
-                            className="inline-flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-0.5"
-                          >
-                            <FlagImg emoji={team.flag} size={16} />
-                            <span className="text-[11px] text-muted-foreground hidden sm:inline">{team.name}</span>
-                            {total > 0 && (
-                              <span className="text-[11px] font-semibold text-emerald-600">+{total}</span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
+                      {!picksHidden() && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {item.teamScores.map(({ team, total }) => (
+                            <span
+                              key={team.id}
+                              className="inline-flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-0.5"
+                            >
+                              <FlagImg emoji={team.flag} size={16} />
+                              <span className="text-[11px] text-muted-foreground hidden sm:inline">{team.name}</span>
+                              {total > 0 && (
+                                <span className="text-[11px] font-semibold text-emerald-600">+{total}</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Points */}
@@ -202,15 +204,15 @@ export function Leaderboard() {
                         <p className="text-2xl font-bold text-foreground tabular-nums">{item.totalPoints}</p>
                         <p className="text-[11px] text-muted-foreground text-right">pts</p>
                       </div>
-                      {isExpanded
+                      {!picksHidden() && (isExpanded
                         ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
                         : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      }
+                      )}
                     </div>
                   </div>
                 </button>
 
-                {isExpanded && (
+                {isExpanded && !picksHidden() && (
                   <div className="px-4 pb-4 pt-1 bg-background/50">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                       {item.teamScores.map(({ team, advPts, matchPts, total }) => (

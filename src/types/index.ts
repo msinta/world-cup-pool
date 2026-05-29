@@ -142,3 +142,7 @@ export const LEVEL_LABELS: Record<number, string> = {
   5: 'Tier 5 — Dark Horse',
   6: 'Tier 6 — Underdog',
 }
+
+// First game: Mexico vs South Africa, June 11 2026 3 PM EDT (19:00 UTC)
+export const TOURNAMENT_START = new Date('2026-06-11T19:00:00Z')
+export const picksHidden = () => Date.now() < TOURNAMENT_START.getTime()

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { RefreshCw, Calendar, CheckCircle } from 'lucide-react'
+import { RefreshCw, Calendar, CheckCircle, Trophy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { STAGE_LABELS } from '@/types'
 import type { Team, Stage } from '@/types'
@@ -20,6 +20,16 @@ interface MatchRow {
 }
 
 const MATCH_SELECT = 'id, stage, home_goals, away_goals, home_penalty_goals, away_penalty_goals, is_completed, match_date, home_team:teams!matches_home_team_id_fkey(id, name, flag, level, created_at), away_team:teams!matches_away_team_id_fkey(id, name, flag, level, created_at)'
+
+const KNOCKOUT_STAGES: Stage[] = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'final']
+
+const STAGE_POINTS: Record<string, string> = {
+  round_of_32: '+3 pts to advance',
+  round_of_16: '+8 pts to advance',
+  quarter_final: '+10 pts to advance',
+  semi_final: '+12 pts to advance',
+  final: '+15 pts · winner +25 pts',
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString(undefined, {
@@ -48,14 +58,12 @@ function MatchCard({ match }: { match: MatchRow }) {
 
   return (
     <div className="flex items-center gap-2 py-3 px-4 border-b last:border-0 hover:bg-black/[0.01] transition-colors">
-      {/* Home team */}
       <div className="flex-1 flex items-center justify-end gap-2">
         <span className="text-sm font-medium text-foreground hidden sm:block text-right">{match.home_team.name}</span>
         <span className="text-sm font-medium text-foreground sm:hidden text-right">{match.home_team.name.split(' ').slice(-1)[0]}</span>
         <FlagImg emoji={match.home_team.flag} size={22} />
       </div>
 
-      {/* Score / time */}
       <div className="text-center shrink-0 w-20">
         {match.is_completed ? (
           <div>
@@ -78,14 +86,12 @@ function MatchCard({ match }: { match: MatchRow }) {
         )}
       </div>
 
-      {/* Away team */}
       <div className="flex-1 flex items-center gap-2">
         <FlagImg emoji={match.away_team.flag} size={22} />
         <span className="text-sm font-medium text-foreground hidden sm:block">{match.away_team.name}</span>
         <span className="text-sm font-medium text-foreground sm:hidden">{match.away_team.name.split(' ').slice(-1)[0]}</span>
       </div>
 
-      {/* Stage badge */}
       <span className="text-[11px] text-muted-foreground shrink-0 hidden md:block w-20 text-right">
         {STAGE_LABELS[match.stage]}
       </span>
@@ -93,11 +99,56 @@ function MatchCard({ match }: { match: MatchRow }) {
   )
 }
 
+function BracketView({ all }: { all: MatchRow[] }) {
+  const knockout = all.filter((m) => KNOCKOUT_STAGES.includes(m.stage))
+
+  if (knockout.length === 0) {
+    return (
+      <div className="text-center py-20 text-muted-foreground">
+        <Trophy className="h-10 w-10 mx-auto mb-4 opacity-20" />
+        <p className="font-medium text-foreground">Knockout bracket not yet available</p>
+        <p className="text-sm mt-1">Teams will be set after the group stage concludes.</p>
+        <div className="mt-6 max-w-sm mx-auto space-y-2">
+          {KNOCKOUT_STAGES.map((stage) => (
+            <div key={stage} className="flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-lg text-sm">
+              <span className="font-medium text-foreground">{STAGE_LABELS[stage]}</span>
+              <span className="text-[11px] text-emerald-600 font-medium">{STAGE_POINTS[stage]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {KNOCKOUT_STAGES.map((stage) => {
+        const stageMatches = knockout.filter((m) => m.stage === stage)
+        if (stageMatches.length === 0) return null
+        const completed = stageMatches.filter((m) => m.is_completed).length
+        return (
+          <div key={stage} className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{STAGE_LABELS[stage]}</p>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-emerald-600 font-medium">{STAGE_POINTS[stage]}</span>
+                {completed > 0 && (
+                  <span className="text-[11px] text-muted-foreground">{completed}/{stageMatches.length} played</span>
+                )}
+              </div>
+            </div>
+            {stageMatches.map((m) => <MatchCard key={m.id} match={m} />)}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function Matches() {
-  const [upcoming, setUpcoming] = useState<MatchRow[]>([])
-  const [completed, setCompleted] = useState<MatchRow[]>([])
+  const [all, setAll] = useState<MatchRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'upcoming' | 'completed'>('upcoming')
+  const [tab, setTab] = useState<'upcoming' | 'completed' | 'bracket'>('upcoming')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -105,9 +156,7 @@ export function Matches() {
       .from('matches')
       .select(MATCH_SELECT)
       .order('match_date')
-    const all = (data ?? []) as unknown as MatchRow[]
-    setUpcoming(all.filter((m) => !m.is_completed))
-    setCompleted(all.filter((m) => m.is_completed).reverse())
+    setAll((data ?? []) as unknown as MatchRow[])
     setLoading(false)
   }, [])
 
@@ -117,42 +166,39 @@ export function Matches() {
     return () => clearInterval(iv)
   }, [load])
 
+  const upcoming = all.filter((m) => !m.is_completed)
+  const completed = [...all.filter((m) => m.is_completed)].reverse()
   const upcomingGroups = groupByDate(upcoming)
   const completedGroups = groupByDate(completed)
+  const knockoutCount = all.filter((m) => KNOCKOUT_STAGES.includes(m.stage)).length
+
+  const tabs = [
+    { key: 'upcoming' as const, label: 'Upcoming', icon: <Calendar className="h-3.5 w-3.5" />, count: upcoming.length, countStyle: 'bg-muted text-muted-foreground' },
+    { key: 'completed' as const, label: 'Results', icon: <CheckCircle className="h-3.5 w-3.5" />, count: completed.length, countStyle: 'bg-emerald-100 text-emerald-700' },
+    { key: 'bracket' as const, label: 'Bracket', icon: <Trophy className="h-3.5 w-3.5" />, count: knockoutCount, countStyle: 'bg-amber-100 text-amber-700' },
+  ]
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        {/* Tab toggle */}
         <div className="flex gap-0 border-b border-border">
-          <button
-            onClick={() => setTab('upcoming')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === 'upcoming'
-                ? 'border-foreground text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            Upcoming
-            {upcoming.length > 0 && (
-              <span className="text-[11px] bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 leading-none">{upcoming.length}</span>
-            )}
-          </button>
-          <button
-            onClick={() => setTab('completed')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === 'completed'
-                ? 'border-foreground text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <CheckCircle className="h-3.5 w-3.5" />
-            Results
-            {completed.length > 0 && (
-              <span className="text-[11px] bg-emerald-100 text-emerald-700 rounded-full px-1.5 py-0.5 leading-none">{completed.length}</span>
-            )}
-          </button>
+          {tabs.map(({ key, label, icon, count, countStyle }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === key
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {icon}
+              {label}
+              {count > 0 && (
+                <span className={`text-[11px] rounded-full px-1.5 py-0.5 leading-none ${countStyle}`}>{count}</span>
+              )}
+            </button>
+          ))}
         </div>
 
         <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading} className="text-muted-foreground hover:text-foreground">
@@ -161,8 +207,10 @@ export function Matches() {
         </Button>
       </div>
 
-      {loading && upcoming.length === 0 && completed.length === 0 ? (
+      {loading && all.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground text-sm">Loading matches…</div>
+      ) : tab === 'bracket' ? (
+        <BracketView all={all} />
       ) : tab === 'upcoming' ? (
         upcomingGroups.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">

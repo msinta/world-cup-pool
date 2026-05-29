@@ -45,7 +45,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
   const [error, setError] = useState(false)
 
   const tryUnlock = () => {
-    const expected = import.meta.env.VITE_ADMIN_PIN as string
+    const expected = '2026'
     if (pin === expected) {
       onUnlock()
     } else {

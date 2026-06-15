@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Users, Info, History } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, picksHidden } from '@/types'
+import { LEVEL_LABELS, TEAMS_PER_TIER, MAX_ENTRIES_PER_PERSON, picksHidden, TOURNAMENT_START } from '@/types'
 import type { Team, Participant } from '@/types'
 import { EditEntry } from '@/components/EditEntry'
 import { toast } from '@/hooks/use-toast'
@@ -50,6 +50,7 @@ export function Entries() {
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const hidden = picksHidden()
+  const locked = Date.now() >= TOURNAMENT_START.getTime()
 
   const [participantName, setParticipantName] = useState('')
   const [accessCode, setAccessCode] = useState('')
@@ -193,7 +194,7 @@ export function Entries() {
             2 teams per tier · 12 teams total
           </p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
+        {!locked && <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -273,7 +274,7 @@ export function Entries() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <EditEntry allTeams={teams} onDone={load} />

@@ -32,6 +32,7 @@ const ALIASES: Record<string, string> = {
   'congo': 'congo dr',
   'bosnia and herzegovina': 'bosnia-herzegovina',
   'south korea': 'korea republic',
+  'cape verde': 'cabo verde',
 }
 
 export interface ApiTeam {

@@ -35,8 +35,8 @@ interface MatchRow {
   away_penalty_goals: number
   is_completed: boolean
   match_date: string | null
-  home_team: Team
-  away_team: Team
+  home_team: Team | null
+  away_team: Team | null
 }
 
 // --- PIN Gate ---
@@ -183,8 +183,8 @@ function MatchCard({ match }: { match: MatchRow }) {
       </div>
       <div className="flex items-center gap-3">
         <span className="flex-1 flex items-center justify-end gap-1.5 text-right">
-          {match.home_team.name}
-          <FlagImg emoji={match.home_team.flag} size={18} />
+          {match.home_team?.name ?? 'TBD'}
+          {match.home_team && <FlagImg emoji={match.home_team.flag} size={18} />}
         </span>
         <span className="font-bold text-base w-20 text-center shrink-0">
           {match.is_completed
@@ -192,8 +192,8 @@ function MatchCard({ match }: { match: MatchRow }) {
             : 'vs'}
         </span>
         <span className="flex-1 flex items-center gap-1.5">
-          <FlagImg emoji={match.away_team.flag} size={18} />
-          {match.away_team.name}
+          {match.away_team && <FlagImg emoji={match.away_team.flag} size={18} />}
+          {match.away_team?.name ?? 'TBD'}
         </span>
       </div>
     </div>

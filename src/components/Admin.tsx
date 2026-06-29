@@ -233,6 +233,14 @@ function ApiSyncPanel() {
       const advancement = new Map<string, Set<Stage>>()
       const finalWinners: string[] = []
 
+      // Winning a knockout match = advancing to the next stage
+      const NEXT_STAGE: Partial<Record<Stage, Stage>> = {
+        round_of_32: 'round_of_16',
+        round_of_16: 'quarter_final',
+        quarter_final: 'semi_final',
+        semi_final: 'final',
+      }
+
       for (const m of apiMatches) {
         const stage = mapApiStage(m.stage)
         if (!stage) continue
@@ -278,15 +286,27 @@ function ApiSyncPanel() {
         if (!error) synced++
 
         if (stage !== 'group') {
+          // Both teams participated in this stage
           for (const tid of [homeId, awayId]) {
             if (!advancement.has(tid)) advancement.set(tid, new Set())
             advancement.get(tid)!.add(stage)
           }
-        }
 
-        if (stage === 'final' && isFinished) {
-          if (m.score?.winner === 'HOME_TEAM') finalWinners.push(homeId)
-          else if (m.score?.winner === 'AWAY_TEAM') finalWinners.push(awayId)
+          // Winner advances to the next stage — inferred from result even before
+          // the API assigns the winner to the next-round match
+          if (isFinished) {
+            const winnerId = m.score?.winner === 'HOME_TEAM' ? homeId
+              : m.score?.winner === 'AWAY_TEAM' ? awayId
+              : null
+            if (winnerId) {
+              const next = NEXT_STAGE[stage]
+              if (next) {
+                if (!advancement.has(winnerId)) advancement.set(winnerId, new Set())
+                advancement.get(winnerId)!.add(next)
+              }
+              if (stage === 'final') finalWinners.push(winnerId)
+            }
+          }
         }
       }
 

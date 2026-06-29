@@ -41,8 +41,8 @@ const ROUND_LABELS: Record<string, string> = {
 }
 
 // Base slot height (px) for one R32 match — later rounds get proportionally taller
-const BASE = 68
-const TOTAL_H = BASE * 16 // 1088px — full bracket height
+const BASE = 88
+const TOTAL_H = BASE * 16 // full bracket height
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -97,12 +97,25 @@ function MatchCard({ match }: { match: MatchRow }) {
   )
 }
 
+function getMatchWinner(match: MatchRow | null): Team | null {
+  if (!match?.is_completed) return null
+  const h = match.home_goals ?? 0, a = match.away_goals ?? 0
+  const hp = match.home_penalty_goals, ap = match.away_penalty_goals
+  if (h > a || (h === a && hp > ap)) return match.home_team
+  if (a > h || (h === a && ap > hp)) return match.away_team
+  return null
+}
+
 // ─── Bracket match card ────────────────────────────────────────────────────────
-function BracketTeamRow({ team, goals, isCompleted, isWinner }: { team: Team | null; goals: number | null; isCompleted: boolean; isWinner: boolean }) {
+function BracketTeamRow({ team, goals, isCompleted, isWinner, isProjected }: { team: Team | null; goals: number | null; isCompleted: boolean; isWinner: boolean; isProjected?: boolean }) {
   return (
     <div className={`flex items-center gap-1.5 px-2.5 py-[7px] ${isWinner ? 'bg-emerald-50' : ''}`}>
       {team ? <FlagImg emoji={team.flag} size={14} /> : <span className="text-sm opacity-30">🏳️</span>}
-      <span className={`text-[11px] flex-1 min-w-0 truncate ${isWinner ? 'font-semibold text-foreground' : team ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+      <span className={`text-[11px] flex-1 min-w-0 truncate ${
+        isWinner ? 'font-semibold text-foreground' :
+        isProjected ? 'text-muted-foreground/60' :
+        team ? 'text-foreground' : 'text-muted-foreground/50'
+      }`}>
         {team?.name ?? 'TBD'}
       </span>
       {isCompleted && <span className={`text-[11px] font-bold tabular-nums ${isWinner ? 'text-emerald-600' : 'text-muted-foreground'}`}>{goals}</span>}
@@ -110,7 +123,7 @@ function BracketTeamRow({ team, goals, isCompleted, isWinner }: { team: Team | n
   )
 }
 
-function BracketCard({ match }: { match: MatchRow | null }) {
+function BracketCard({ match, isProjected }: { match: MatchRow | null; isProjected?: boolean }) {
   if (!match) {
     return (
       <div className="w-40 rounded-lg border border-dashed border-border overflow-hidden bg-muted/20">
@@ -126,10 +139,10 @@ function BracketCard({ match }: { match: MatchRow | null }) {
   const hasPens = match.home_penalty_goals > 0 || match.away_penalty_goals > 0
 
   return (
-    <div className="w-40 rounded-lg border border-border bg-card shadow-sm overflow-hidden">
-      <BracketTeamRow team={match.home_team} goals={match.home_goals} isCompleted={match.is_completed} isWinner={homeWin} />
+    <div className={`w-40 rounded-lg border overflow-hidden shadow-sm ${isProjected ? 'border-dashed border-border/60 bg-muted/10' : 'border-border bg-card'}`}>
+      <BracketTeamRow team={match.home_team} goals={match.home_goals} isCompleted={match.is_completed} isWinner={homeWin} isProjected={isProjected} />
       <div className="border-t border-border">
-        <BracketTeamRow team={match.away_team} goals={match.away_goals} isCompleted={match.is_completed} isWinner={awayWin} />
+        <BracketTeamRow team={match.away_team} goals={match.away_goals} isCompleted={match.is_completed} isWinner={awayWin} isProjected={isProjected} />
       </div>
       <div className="border-t border-border bg-muted/30 px-2.5 py-1 flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground">{match.match_date ? formatDate(match.match_date) : 'TBD'}</span>
@@ -140,7 +153,7 @@ function BracketCard({ match }: { match: MatchRow | null }) {
 }
 
 // ─── One round column ──────────────────────────────────────────────────────────
-function BracketRound({ matches, isLast }: { stage: string; matches: (MatchRow | null)[]; isLast: boolean }) {
+function BracketRound({ matches, isLast, projected }: { stage: string; matches: (MatchRow | null)[]; isLast: boolean; projected?: boolean[] }) {
   const count = matches.length
   const slotH = TOTAL_H / count // height allocated to each match in this round
 
@@ -155,7 +168,7 @@ function BracketRound({ matches, isLast }: { stage: string; matches: (MatchRow |
           <div key={i} className="relative flex items-center" style={{ height: slotH }}>
             {/* Match card — centered in its slot */}
             <div className="flex items-center justify-center w-full">
-              <BracketCard match={match} />
+              <BracketCard match={match} isProjected={projected?.[i]} />
             </div>
 
             {showConnector && (
@@ -213,10 +226,31 @@ function BracketView({ all }: { all: MatchRow[] }) {
   const rounds = KNOCKOUT_STAGES.map((stage) => {
     const count = ROUND_COUNTS[stage]
     const played = knockout.filter((m) => m.stage === stage)
-    // Pad with nulls for unplayed/upcoming slots
     const slots: (MatchRow | null)[] = Array.from({ length: count }, (_, i) => played[i] ?? null)
-    return { stage, slots }
+    return { stage, slots, projected: Array<boolean>(count).fill(false) }
   })
+
+  // Project winners from completed matches into the next round's TBD slots.
+  // Assumes matches are ordered by date (which matches bracket progression order).
+  for (let ri = 1; ri < rounds.length; ri++) {
+    const prevSlots = rounds[ri - 1].slots
+    rounds[ri].slots = rounds[ri].slots.map((slot, i) => {
+      if (slot?.home_team && slot?.away_team) return slot
+      const w1 = getMatchWinner(prevSlots[i * 2] ?? null)
+      const w2 = getMatchWinner(prevSlots[i * 2 + 1] ?? null)
+      if (!w1 && !w2) return slot
+      rounds[ri].projected[i] = true
+      const base: MatchRow = slot ?? {
+        id: `proj-${ri}-${i}`,
+        stage: rounds[ri].stage,
+        home_goals: null, away_goals: null,
+        home_penalty_goals: 0, away_penalty_goals: 0,
+        is_completed: false, match_date: null,
+        home_team: null, away_team: null,
+      }
+      return { ...base, home_team: w1 ?? base.home_team, away_team: w2 ?? base.away_team }
+    })
+  }
 
   return (
     <div className="overflow-x-auto pb-4">
@@ -233,12 +267,13 @@ function BracketView({ all }: { all: MatchRow[] }) {
 
       {/* Bracket columns */}
       <div className="flex" style={{ minWidth: `${KNOCKOUT_STAGES.length * 192}px` }}>
-        {rounds.map(({ stage, slots }, ri) => (
+        {rounds.map(({ stage, slots, projected }, ri) => (
           <div key={stage} style={{ width: 192 }}>
             <BracketRound
               stage={stage}
               matches={slots}
               isLast={ri === rounds.length - 1}
+              projected={projected}
             />
           </div>
         ))}

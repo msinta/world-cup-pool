@@ -5,7 +5,9 @@ export const hasApiKey = true // key lives server-side in Supabase secret
 
 const STAGE_MAP: Partial<Record<string, Stage>> = {
   GROUP_STAGE: 'group',
+  LAST_32: 'round_of_32',
   ROUND_OF_32: 'round_of_32',
+  LAST_16: 'round_of_16',
   ROUND_OF_16: 'round_of_16',
   QUARTER_FINALS: 'quarter_final',
   SEMI_FINALS: 'semi_final',

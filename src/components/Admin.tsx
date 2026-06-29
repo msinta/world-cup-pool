@@ -290,12 +290,75 @@ function ApiSyncPanel() {
         }
       }
 
-      for (const [teamId, stages] of advancement) {
+      // Compute group standings from all completed group matches in the DB.
+      // This populates finished_first_in_group / finished_second_in_group even before
+      // R32 matches are available from the API.
+      const { data: groupMatches } = await supabase
+        .from('matches')
+        .select('home_team_id, away_team_id, home_goals, away_goals')
+        .eq('stage', 'group')
+        .eq('is_completed', true)
+
+      const groupFirst = new Set<string>()
+      const groupSecond = new Set<string>()
+
+      if (groupMatches && groupMatches.length > 0) {
+        // Find groups: teams that played each other are in the same group
+        const neighbors = new Map<string, Set<string>>()
+        for (const m of groupMatches as { home_team_id: string; away_team_id: string; home_goals: number; away_goals: number }[]) {
+          if (!m.home_team_id || !m.away_team_id) continue
+          if (!neighbors.has(m.home_team_id)) neighbors.set(m.home_team_id, new Set())
+          if (!neighbors.has(m.away_team_id)) neighbors.set(m.away_team_id, new Set())
+          neighbors.get(m.home_team_id)!.add(m.away_team_id)
+          neighbors.get(m.away_team_id)!.add(m.home_team_id)
+        }
+
+        const visited = new Set<string>()
+        for (const teamId of neighbors.keys()) {
+          if (visited.has(teamId)) continue
+          const group: string[] = []
+          const queue = [teamId]
+          while (queue.length > 0) {
+            const t = queue.shift()!
+            if (visited.has(t)) continue
+            visited.add(t)
+            group.push(t)
+            for (const n of (neighbors.get(t) ?? [])) {
+              if (!visited.has(n)) queue.push(n)
+            }
+          }
+
+          const gm = groupMatches as { home_team_id: string; away_team_id: string; home_goals: number; away_goals: number }[]
+          const standings = group.map((tid) => {
+            let pts = 0, gf = 0, ga = 0
+            for (const m of gm) {
+              const isHome = m.home_team_id === tid
+              const isAway = m.away_team_id === tid
+              if (!isHome && !isAway) continue
+              const teamGoals = isHome ? (m.home_goals ?? 0) : (m.away_goals ?? 0)
+              const oppGoals = isHome ? (m.away_goals ?? 0) : (m.home_goals ?? 0)
+              gf += teamGoals; ga += oppGoals
+              if (teamGoals > oppGoals) pts += 3
+              else if (teamGoals === oppGoals) pts += 1
+            }
+            return { tid, pts, gd: gf - ga, gf }
+          }).sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
+
+          if (standings[0]) groupFirst.add(standings[0].tid)
+          if (standings[1]) groupSecond.add(standings[1].tid)
+        }
+      }
+
+      // Merge: all teams needing a record are either in knockout matches OR placed 1st/2nd in group
+      const allTeams = new Set([...advancement.keys(), ...groupFirst, ...groupSecond])
+
+      for (const teamId of allTeams) {
+        const stages = advancement.get(teamId) ?? new Set<Stage>()
         const inFinal = stages.has('final')
         const inSF = stages.has('semi_final') || inFinal
         const inQF = stages.has('quarter_final') || inSF
         const inR16 = stages.has('round_of_16') || inQF
-        const inR32 = stages.has('round_of_32') || inR16
+        const inR32 = stages.has('round_of_32') || inR16 || groupFirst.has(teamId) || groupSecond.has(teamId)
 
         await supabase.from('team_advancement').upsert({
           team_id: teamId,
@@ -305,11 +368,13 @@ function ApiSyncPanel() {
           advanced_to_semis: inSF,
           advanced_to_final: inFinal,
           won_world_cup: finalWinners.includes(teamId),
+          finished_first_in_group: groupFirst.has(teamId),
+          finished_second_in_group: groupSecond.has(teamId),
           updated_at: new Date().toISOString(),
         }, { onConflict: 'team_id' })
       }
 
-      toast({ title: `Synced ${synced} matches`, description: 'Advancement updated automatically.', variant: 'success' })
+      toast({ title: `Synced ${synced} matches`, description: 'Advancement + group standings updated.', variant: 'success' })
       void load()
     } catch (err) {
       toast({ title: 'Sync failed', description: err instanceof Error ? err.message : 'Unknown', variant: 'destructive' })

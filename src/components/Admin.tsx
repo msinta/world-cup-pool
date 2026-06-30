@@ -298,27 +298,30 @@ function ApiSyncPanel() {
         // Don't overwrite scores on already-completed matches — protects manually corrected data
         // when the API returns incorrect fullTime/penalty values.
         const alreadyDone = completedIds.has(extId)
-        const rec = alreadyDone ? {
-          external_id: extId,
-          home_team_id: homeId,
-          away_team_id: awayId,
-          stage,
-          match_date: m.utcDate,
-          is_completed: true,
-        } : {
-          external_id: extId,
-          home_team_id: homeId,
-          away_team_id: awayId,
-          stage,
-          match_date: m.utcDate,
-          is_completed: isFinished,
-          home_goals: m.score?.fullTime?.home ?? null,
-          away_goals: m.score?.fullTime?.away ?? null,
-          home_penalty_goals: m.score?.penalties?.home ?? 0,
-          away_penalty_goals: m.score?.penalties?.away ?? 0,
+        let error: unknown
+        if (alreadyDone) {
+          ;({ error } = await supabase.from('matches').upsert({
+            external_id: extId,
+            home_team_id: homeId,
+            away_team_id: awayId,
+            stage,
+            match_date: m.utcDate,
+            is_completed: true,
+          }, { onConflict: 'external_id' }))
+        } else {
+          ;({ error } = await supabase.from('matches').upsert({
+            external_id: extId,
+            home_team_id: homeId,
+            away_team_id: awayId,
+            stage,
+            match_date: m.utcDate,
+            is_completed: isFinished,
+            home_goals: m.score?.fullTime?.home ?? null,
+            away_goals: m.score?.fullTime?.away ?? null,
+            home_penalty_goals: m.score?.penalties?.home ?? 0,
+            away_penalty_goals: m.score?.penalties?.away ?? 0,
+          }, { onConflict: 'external_id' }))
         }
-
-        const { error } = await supabase.from('matches').upsert(rec, { onConflict: 'external_id' })
         if (!error) synced++
 
         if (stage !== 'group') {

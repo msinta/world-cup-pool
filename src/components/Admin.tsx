@@ -226,8 +226,12 @@ function ApiSyncPanel() {
     setSyncing(true)
     try {
       const apiMatches = await fetchWorldCupMatches()
-      const { data: dbTeams } = await supabase.from('teams').select('id, name')
+      const [{ data: dbTeams }, { data: existingCompleted }] = await Promise.all([
+        supabase.from('teams').select('id, name'),
+        supabase.from('matches').select('external_id').eq('is_completed', true),
+      ])
       const nameMap = buildNameMap((dbTeams ?? []) as { id: string; name: string }[])
+      const completedIds = new Set((existingCompleted ?? []).map((r: { external_id: string }) => r.external_id))
 
       let synced = 0
       const advancement = new Map<string, Set<Stage>>()
@@ -269,8 +273,19 @@ function ApiSyncPanel() {
         if (!homeId || !awayId) continue
 
         const isFinished = m.status === 'FINISHED'
-        const rec = {
-          external_id: String(m.id),
+        const extId = String(m.id)
+        // Don't overwrite scores on already-completed matches — protects manually corrected data
+        // when the API returns incorrect fullTime/penalty values.
+        const alreadyDone = completedIds.has(extId)
+        const rec = alreadyDone ? {
+          external_id: extId,
+          home_team_id: homeId,
+          away_team_id: awayId,
+          stage,
+          match_date: m.utcDate,
+          is_completed: true,
+        } : {
+          external_id: extId,
           home_team_id: homeId,
           away_team_id: awayId,
           stage,

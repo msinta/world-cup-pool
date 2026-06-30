@@ -245,6 +245,27 @@ function ApiSyncPanel() {
         semi_final: 'final',
       }
 
+      // Official 2026 WC bracket draw: R32 match → which R16 slot the winner fills
+      const R32_TO_R16: Record<string, { r16ExtId: string; position: 'home' | 'away' }> = {
+        '537417': { r16ExtId: '537376', position: 'home' }, // Canada/South Africa → R16 slot home
+        '537418': { r16ExtId: '537376', position: 'away' }, // Netherlands/Morocco → R16 slot away
+        '537415': { r16ExtId: '537375', position: 'home' }, // Germany/Paraguay → R16 slot home
+        '537416': { r16ExtId: '537375', position: 'away' }, // France/Sweden → R16 slot away
+        '537423': { r16ExtId: '537377', position: 'home' }, // Brazil/Japan → R16 slot home
+        '537424': { r16ExtId: '537377', position: 'away' }, // Ivory Coast/Norway → R16 slot away
+        '537425': { r16ExtId: '537378', position: 'home' }, // Mexico/Ecuador → R16 slot home
+        '537426': { r16ExtId: '537378', position: 'away' }, // England/Congo DR → R16 slot away
+        '537419': { r16ExtId: '537379', position: 'home' }, // Portugal/Croatia → R16 slot home
+        '537420': { r16ExtId: '537379', position: 'away' }, // Spain/Austria → R16 slot away
+        '537421': { r16ExtId: '537380', position: 'home' }, // USA/Bosnia → R16 slot home
+        '537422': { r16ExtId: '537380', position: 'away' }, // Belgium/Senegal → R16 slot away
+        '537427': { r16ExtId: '537381', position: 'home' }, // Argentina/Cabo Verde → R16 slot home
+        '537428': { r16ExtId: '537381', position: 'away' }, // Australia/Egypt → R16 slot away
+        '537429': { r16ExtId: '537382', position: 'home' }, // Switzerland/Algeria → R16 slot home
+        '537430': { r16ExtId: '537382', position: 'away' }, // Colombia/Ghana → R16 slot away
+      }
+      const r16Updates: { extId: string; col: 'home_team_id' | 'away_team_id'; teamId: string }[] = []
+
       for (const m of apiMatches) {
         const stage = mapApiStage(m.stage)
         if (!stage) continue
@@ -320,9 +341,23 @@ function ApiSyncPanel() {
                 advancement.get(winnerId)!.add(next)
               }
               if (stage === 'final') finalWinners.push(winnerId)
+
+              // Fill winner into the correct next-round match slot using bracket draw
+              const r16slot = R32_TO_R16[extId]
+              if (r16slot) {
+                r16Updates.push({ extId: r16slot.r16ExtId, col: r16slot.position === 'home' ? 'home_team_id' : 'away_team_id', teamId: winnerId })
+              }
             }
           }
         }
+      }
+
+      // Fill next-round match slots with known winners from the bracket draw
+      for (const { extId: r16ExtId, col, teamId } of r16Updates) {
+        await supabase.from('matches')
+          .update({ [col]: teamId })
+          .eq('external_id', r16ExtId)
+          .is(col, null) // only update if slot is still empty
       }
 
       // Compute group standings from all completed group matches in the DB.

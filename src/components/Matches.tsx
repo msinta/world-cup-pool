@@ -126,9 +126,15 @@ function BracketCard({ match, isProjected }: { match: MatchRow | null; isProject
     )
   }
 
-  const homeWin = match.is_completed && (match.home_goals ?? 0) > (match.away_goals ?? 0)
-  const awayWin = match.is_completed && (match.away_goals ?? 0) > (match.home_goals ?? 0)
   const hasPens = match.home_penalty_goals > 0 || match.away_penalty_goals > 0
+  const homeWin = match.is_completed && (
+    (match.home_goals ?? 0) > (match.away_goals ?? 0) ||
+    (hasPens && match.home_penalty_goals > match.away_penalty_goals)
+  )
+  const awayWin = match.is_completed && (
+    (match.away_goals ?? 0) > (match.home_goals ?? 0) ||
+    (hasPens && match.away_penalty_goals > match.home_penalty_goals)
+  )
 
   return (
     <div className={`w-40 rounded-lg border overflow-hidden shadow-sm ${isProjected ? 'border-dashed border-border/60 bg-muted/10' : 'border-border bg-card'}`}>

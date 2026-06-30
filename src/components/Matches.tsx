@@ -41,7 +41,7 @@ const ROUND_LABELS: Record<string, string> = {
 }
 
 // Base slot height (px) for one R32 match — later rounds get proportionally taller
-const BASE = 88
+const BASE = 100
 const TOTAL_H = BASE * 16 // full bracket height
 
 function formatDate(dateStr: string) {
@@ -97,14 +97,6 @@ function MatchCard({ match }: { match: MatchRow }) {
   )
 }
 
-function getMatchWinner(match: MatchRow | null): Team | null {
-  if (!match?.is_completed) return null
-  const h = match.home_goals ?? 0, a = match.away_goals ?? 0
-  const hp = match.home_penalty_goals, ap = match.away_penalty_goals
-  if (h > a || (h === a && hp > ap)) return match.home_team
-  if (a > h || (h === a && ap > hp)) return match.away_team
-  return null
-}
 
 // ─── Bracket match card ────────────────────────────────────────────────────────
 function BracketTeamRow({ team, goals, isCompleted, isWinner, isProjected }: { team: Team | null; goals: number | null; isCompleted: boolean; isWinner: boolean; isProjected?: boolean }) {
@@ -227,30 +219,8 @@ function BracketView({ all }: { all: MatchRow[] }) {
     const count = ROUND_COUNTS[stage]
     const played = knockout.filter((m) => m.stage === stage)
     const slots: (MatchRow | null)[] = Array.from({ length: count }, (_, i) => played[i] ?? null)
-    return { stage, slots, projected: Array<boolean>(count).fill(false) }
+    return { stage, slots }
   })
-
-  // Project winners from completed matches into the next round's TBD slots.
-  // Assumes matches are ordered by date (which matches bracket progression order).
-  for (let ri = 1; ri < rounds.length; ri++) {
-    const prevSlots = rounds[ri - 1].slots
-    rounds[ri].slots = rounds[ri].slots.map((slot, i) => {
-      if (slot?.home_team && slot?.away_team) return slot
-      const w1 = getMatchWinner(prevSlots[i * 2] ?? null)
-      const w2 = getMatchWinner(prevSlots[i * 2 + 1] ?? null)
-      if (!w1 && !w2) return slot
-      rounds[ri].projected[i] = true
-      const base: MatchRow = slot ?? {
-        id: `proj-${ri}-${i}`,
-        stage: rounds[ri].stage,
-        home_goals: null, away_goals: null,
-        home_penalty_goals: 0, away_penalty_goals: 0,
-        is_completed: false, match_date: null,
-        home_team: null, away_team: null,
-      }
-      return { ...base, home_team: w1 ?? base.home_team, away_team: w2 ?? base.away_team }
-    })
-  }
 
   return (
     <div className="overflow-x-auto pb-4">
@@ -267,13 +237,12 @@ function BracketView({ all }: { all: MatchRow[] }) {
 
       {/* Bracket columns */}
       <div className="flex" style={{ minWidth: `${KNOCKOUT_STAGES.length * 192}px` }}>
-        {rounds.map(({ stage, slots, projected }, ri) => (
+        {rounds.map(({ stage, slots }, ri) => (
           <div key={stage} style={{ width: 192 }}>
             <BracketRound
               stage={stage}
               matches={slots}
               isLast={ri === rounds.length - 1}
-              projected={projected}
             />
           </div>
         ))}
